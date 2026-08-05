@@ -3,18 +3,9 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-
+import requests
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
-
-from datos_cuencas import (
-    CUENCAS,
-    CIUDADES,
-    obtener_estado,
-    obtener_estado_ciudad,
-    ciudades_de_cuenca,
-    resumen_todas,
-)
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -24,42 +15,59 @@ logger = logging.getLogger(__name__)
 
 TOKEN = os.environ.get("TFG_BOT_TOKEN")
 
+# El bot y el backend corren en el mismo contenedor de Render, asi que
+# hablamos por localhost salvo que se indique otra cosa con BACKEND_URL.
+PUERTO = os.environ.get("PORT", "10000")
+BACKEND_URL = os.environ.get("BACKEND_URL", f"http://localhost:{PUERTO}")
+
+CLAVES_CUENCAS = ["parana", "paraguay", "bermejo", "pilcomayo"]
+CLAVES_CIUDADES = [
+    "resistencia", "barranqueras", "corrientes", "formosa", "puerto_bermejo",
+    "el_sauzalito", "isla_del_cerrito", "puerto_vilelas", "la_leonesa",
+    "pampa_del_indio", "villa_rio_bermejito", "fuerte_esperanza",
+]
 
 
-def formatear_cuenca(clave_cuenca: str, datos: dict) -> str:
-    aviso = "" if datos["conectado"] else "\n⚠️ _Dato de demostración, sin conexión automática aún._"
+def _get(path: str, timeout: float = 8.0):
+    """GET al backend con manejo de errores simple, para no tirar abajo el bot."""
+    try:
+        r = requests.get(f"{BACKEND_URL}{path}", timeout=timeout)
+        r.raise_for_status()
+        return r.json()
+    except Exception:
+        logger.exception(f"Error consultando el backend en {path}")
+        return None
+
+
+def formatear_cuenca(datos: dict) -> str:
+    aviso = "" if datos["conectado"] else "\n⚠️ <i>Dato de demostracion, sin conexion automatica aun.</i>"
     texto = (
-        f"{datos['emoji']} *{datos['nombre']}* ({datos['estacion']})\n"
+        f"{datos['emoji']} <b>{datos['nombre']}</b> ({datos['estacion']})\n"
         f"Nivel: {datos['nivel_metros']} m — Estado: {datos['estado']}\n"
-        f"Umbral alerta: {datos['umbral_alerta']} m | evacuación: {datos['umbral_evacuacion']} m\n"
-        f"Fuente: {datos['fuente_datos']}\n"
-        f"Última verificación: {datos['ultima_verificacion']}"
+        f"Umbral alerta: {datos['umbral_alerta']} m | evacuacion: {datos['umbral_evacuacion']} m\n"
+        f"Fuente: {datos['fuente']}\n"
+        f"Ultima verificacion: {datos['ultima_verificacion']}"
         f"{aviso}"
     )
-    ciudades = ciudades_de_cuenca(clave_cuenca)
-    if ciudades:
-        texto += "\n\n📍 *Localidades monitoreadas en esta cuenca:*"
-        for c in ciudades:
-            texto += f"\n{c['emoji']} {c['nombre']}: {c['nivel_metros']} m ({c['estado']})"
     return texto
 
 
-def formatear_ciudad(datos: dict) -> str:
-    aviso = "" if datos["conectado"] else "\n⚠️ _Dato de demostración, sin conexión automática aún._"
+def formatear_ciudad(datos: dict, nombre_cuenca: str) -> str:
+    aviso = "" if datos["conectado"] else "\n⚠️ <i>Dato de demostracion, sin conexion automatica aun.</i>"
     return (
-        f"{datos['emoji']} *{datos['nombre']}* (cuenca: {CUENCAS[datos['cuenca']]['nombre']})\n"
+        f"{datos['emoji']} <b>{datos['nombre']}</b> (cuenca: {nombre_cuenca})\n"
         f"Nivel: {datos['nivel_metros']} m — Estado: {datos['estado']}\n"
-        f"Umbral alerta: {datos['umbral_alerta']} m | evacuación: {datos['umbral_evacuacion']} m\n"
-        f"Fuente: {datos['fuente_datos']}\n"
-        f"Última verificación: {datos['ultima_verificacion']}"
+        f"Umbral alerta: {datos['umbral_alerta']} m | evacuacion: {datos['umbral_evacuacion']} m\n"
+        f"Fuente: {datos['fuente']}\n"
+        f"Ultima verificacion: {datos['ultima_verificacion']}"
         f"{aviso}"
     )
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     texto = (
-        "/pilcomayo - detalle Río Pilcomayo\n\n"
+        "/cuencas - resumen de las 4 cuencas\n"
+        "/parana /paraguay /bermejo /pilcomayo - detalle por cuenca\n\n"
         "<b>Por Localidad:</b>\n"
         "/resistencia - Resistencia\n"
         "/barranqueras - Barranqueras\n"
@@ -71,20 +79,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/puerto_vilelas - Puerto Vilelas\n"
         "/la_leonesa - La Leonesa\n"
         "/pampa_del_indio - Pampa del Indio\n"
-        "/villa_rio_bermejito - Villa Río Bermejito\n"
+        "/villa_rio_bermejito - Villa Rio Bermejito\n"
         "/fuerte_esperanza - Fuerte Esperanza"
     )
-    # Cambiamos reply_markdown por reply_text con parse_mode='HTML'
     await update.message.reply_text(texto, parse_mode='HTML')
 
 
 async def cuencas_resumen(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Quitamos los asteriscos y corchetes conflictivos de Markdown
+    datos = _get("/cuencas")
+    if not datos:
+        await update.message.reply_text("No pude consultar el backend, probá de nuevo en unos segundos.")
+        return
     lineas = [
-        f"{i['emoji']} <b>{i['nombre']}</b>: {i['nivel_metros']} m ({i['estado']})"
-        for i in resumen_todas()
+        f"{c['emoji']} <b>{c['nombre']}</b>: {c['nivel_metros']} m ({c['estado']})"
+        for c in datos["cuencas"].values()
     ]
-    # Cambiamos reply_text normal por uno con soporte HTML
     await update.message.reply_text(
         "<b>Estado de las 4 cuencas:</b>\n\n" + "\n".join(lineas),
         parse_mode='HTML'
@@ -93,35 +102,49 @@ async def cuencas_resumen(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def hacer_handler_cuenca(clave: str):
     async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        datos = obtener_estado(clave)
-        # Cambiamos reply_markdown por reply_text con soporte HTML
-        await update.message.reply_text(formatear_cuenca(clave, datos), parse_mode='HTML')
+        datos = _get(f"/cuencas/{clave}")
+        if not datos or "cuenca" not in datos:
+            await update.message.reply_text("No pude consultar el backend, probá de nuevo en unos segundos.")
+            return
+        texto = formatear_cuenca(datos["cuenca"])
+        if datos["localidades"]:
+            texto += "\n\n📍 <b>Localidades monitoreadas en esta cuenca:</b>"
+            for c in datos["localidades"]:
+                texto += f"\n{c['emoji']} {c['nombre']}: {c['nivel_metros']} m ({c['estado']})"
+        await update.message.reply_text(texto, parse_mode='HTML')
     return handler
+
 
 def hacer_handler_ciudad(clave: str):
     async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        datos = obtener_estado_ciudad(clave)
-        await update.message.reply_markdown(formatear_ciudad(datos))
+        datos = _get(f"/localidades/{clave}")
+        if not datos or "localidad" not in datos:
+            await update.message.reply_text("No pude consultar el backend, probá de nuevo en unos segundos.")
+            return
+        loc = datos["localidad"]
+        cuenca_info = _get(f"/cuencas/{loc['cuenca_clave']}")
+        nombre_cuenca = cuenca_info["cuenca"]["nombre"] if cuenca_info else loc["cuenca_clave"]
+        await update.message.reply_text(formatear_ciudad(loc, nombre_cuenca), parse_mode='HTML')
     return handler
 
 
 def main():
     if not TOKEN:
         raise RuntimeError(
-            "Falta la variable de entorno TELEGRAM_BOT_TOKEN. "
-            "Configurala local o en Render, nunca la escribas en el código."
+            "Falta la variable de entorno TFG_BOT_TOKEN. "
+            "Configurala local o en Render, nunca la escribas en el codigo."
         )
 
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("cuencas", cuencas_resumen))
-    for clave in CUENCAS:
+    for clave in CLAVES_CUENCAS:
         app.add_handler(CommandHandler(clave, hacer_handler_cuenca(clave)))
-    for clave in CIUDADES:
+    for clave in CLAVES_CIUDADES:
         app.add_handler(CommandHandler(clave, hacer_handler_ciudad(clave)))
 
-    logger.info("Bot iniciado, esperando mensajes (polling)...")
+    logger.info(f"Bot iniciado, consultando backend en {BACKEND_URL}, esperando mensajes (polling)...")
     app.run_polling()
 
 
