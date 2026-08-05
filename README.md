@@ -79,8 +79,8 @@ El impacto hídrico se evalúa de forma diferenciada en los siguientes puntos de
 4. **Configurar el entorno:**
    Edita el archivo `.env` recién creado e introduce el token provisto por Telegram:
    ```env
-   TELEGRAM_BOT_TOKEN="tu_token_secreto_aqui"
-   ```
+   TFG_BOT_TOKEN="tu_token_secreto_aqui"
+
 
 5. **Iniciar el bot:**
    ```bash
