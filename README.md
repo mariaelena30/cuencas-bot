@@ -1,8 +1,10 @@
 # 🌊 cuencas-bot
 
-[![Python Version](https://shields.io)](https://python.org)
-[![Platform](https://shields.io)](https://telegram.org)
-[![Deploy](https://shields.io)](https://render.com)
+<p align="left">
+  <img src="https://shields.io" alt="Python Version">
+  <img src="https://shields.io" alt="Platform">
+  <img src="https://shields.io" alt="Hosting">
+</p>
 
 Bot de Telegram diseñado para el monitoreo hidrológico en tiempo real de **4 cuencas críticas** de la Provincia del Chaco y zonas de influencia. El sistema evalúa los niveles de los ríos y clasifica automáticamente la gravedad de la situación mediante alertas visuales normalizadas.
 
@@ -88,19 +90,22 @@ El impacto hídrico se evalúa de forma diferenciada en los siguientes puntos de
 
 ---
 
-## ☁️ Despliegue en Producción (Render)
+## ☁️ Opciones de Despliegue Permanente (24/7)
 
-Este proyecto está diseñado para ejecutarse como un proceso continuo e independiente (*daemon*) en la nube:
+Al emplear mecanismos de escucha continua (*Polling*), el script requiere de un entorno que no se suspenda por inactividad. Se sugieren las siguientes alternativas de infraestructura:
 
-1. Realiza un `git push` de tu repositorio a GitHub (comprueba que tu `.gitignore` esté ocultando correctamente el archivo `.env`).
-2. En tu panel de **Render**, crea un nuevo **Background Worker**.
-3. Conecta el repositorio de GitHub de este bot.
-4. Completa la configuración del entorno con los siguientes comandos:
-   *   **Build Command:** `pip install -r requirements.txt`
-   *   **Start Command:** `python bot.py`
-5. En la pestaña **Environment**, declara de forma segura la variable de producción:
-   *   `TELEGRAM_BOT_TOKEN` = `[Tu Token Real de BotFather]`
-6. Ejecuta el **Deploy**. El bot comenzará a escuchar eventos en Telegram de inmediato sin necesidad de gestionar certificados SSL o dominios web.
+### Opción A: Servidor Cloud Virtual (VPS) - Recomendado
+Desplegar sobre una instancia cloud pequeña (Ubuntu/Debian) mediante herramientas de gestión persistente:
+```bash
+# Ejecutar en segundo plano mediante un multiplexor de terminales
+tmux new -s cuencasbot
+python bot.py
+# Desacoplar presionando: Ctrl + B y luego D
+```
+*Alternativa profesional:* Configurar un servicio de sistema nativo mediante `systemd` para asegurar el reinicio automático del script tras fallas del sistema o reboots del servidor.
+
+### Opción B: Plataformas PaaS con persistencia activa
+Si se opta por proveedores administrados, se deben considerar alternativas que soporten procesos demonios estables de forma persistente sin ciclos de suspensión comerciales drásticos en sus planes de desarrollo.
 
 ---
 
