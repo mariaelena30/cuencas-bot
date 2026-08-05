@@ -1,16 +1,16 @@
 """
-Backend del Portal Hídrico Chaco.
+Backend del Portal Hidrico Chaco.
 
-Sirve datos de riesgo hídrico para Resistencia, Barranqueras y Formosa
-(capital), pensado para alimentar tanto el dashboard de Streamlit como,
-a futuro, el bot de Telegram — un solo lugar con la información, para
-no tener datos duplicados y desincronizados en dos proyectos distintos.
+Fuente unica de datos para el dashboard de Streamlit y el bot de
+Telegram, asi no quedan datos duplicados y desincronizados entre
+proyectos.
 
 IMPORTANTE SOBRE LOS DATOS:
-Los valores de abajo son datos SEMILLA (de referencia/demostración), no
-una conexión automática en vivo. Cada localidad indica 'conectado: False'
-hasta que se integre su fuente real. Se actualizan a mano por ahora vía
-los endpoints POST, o reemplazando los valores de este archivo.
+Los valores de abajo son datos SEMILLA (de referencia/demostracion), no
+una conexion automatica en vivo. Cada localidad/cuenca indica
+'conectado: False' hasta que se integre su fuente real. Se actualizan
+a mano por ahora via los endpoints POST, o reemplazando los valores de
+este archivo.
 """
 
 from datetime import datetime, timezone
@@ -18,176 +18,158 @@ from datetime import datetime, timezone
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-app = FastAPI(title="Portal Hídrico Chaco - API")
+app = FastAPI(title="Portal Hidrico Chaco - API")
 
 # ---------------------------------------------------------------------
 # EXPLICACIONES EN LENGUAJE SIMPLE
-# El objetivo del proyecto es que lo entienda cualquier persona, no solo
-# alguien con formación técnica. Estos textos se devuelven junto a los
-# datos para que el dashboard/bot los pueda mostrar como ayuda.
 # ---------------------------------------------------------------------
 EXPLICACIONES = {
     "nivel_metros": (
-        "Es cuánto subió el agua del río en ese punto, medido en metros. "
+        "Es cuanto subio el agua del rio en ese punto, medido en metros. "
         "Cuando supera el 'umbral de alerta', hay que empezar a prestar "
-        "atención; si supera el 'umbral de evacuación', es momento de "
+        "atencion; si supera el 'umbral de evacuacion', es momento de "
         "seguir las indicaciones de Defensa Civil."
     ),
     "ndvi": (
-        "El NDVI mide qué tan 'verde' y sana está la vegetación vista "
-        "desde satélite. Sirve como pista indirecta: cambios bruscos "
-        "pueden indicar sequía, inundación o degradación del suelo en "
+        "El NDVI mide que tan 'verde' y sana esta la vegetacion vista "
+        "desde satelite. Sirve como pista indirecta: cambios bruscos "
+        "pueden indicar sequia, inundacion o degradacion del suelo en "
         "la zona."
     ),
     "oni": (
-        "El índice ONI mide si el océano Pacífico está más caliente "
-        "(El Niño, más lluvia en la región) o más frío (La Niña, menos "
+        "El indice ONI mide si el oceano Pacifico esta mas caliente "
+        "(El Nino, mas lluvia en la region) o mas frio (La Nina, menos "
         "lluvia) que lo normal. Ayuda a anticipar si se viene una "
-        "temporada más húmeda o más seca."
+        "temporada mas humeda o mas seca."
     ),
     "precipitacion_acumulada_mm": (
-        "Es la cantidad de lluvia caída, sumada en un período (últimas "
-        "24 o 72 horas), medida en milímetros. Lluvia muy concentrada "
-        "en pocas horas es lo que más rápido puede hacer subir un río."
+        "Es la cantidad de lluvia caida, sumada en un periodo (ultimas "
+        "24 o 72 horas), medida en milimetros. Lluvia muy concentrada "
+        "en pocas horas es lo que mas rapido puede hacer subir un rio."
     ),
 }
 
 # ---------------------------------------------------------------------
-# BASE DE CONOCIMIENTO — datos semilla, cargar vía POST o conectar
-# fuente automática cuando esté disponible.
+# CUENCAS — datos representativos de cada una de las 4 cuencas
 # ---------------------------------------------------------------------
-localidades: dict = {
-    "resistencia": {
-        "nombre": "Resistencia",
-        "cuenca": "Río Paraná",
-        "nivel_metros": 3.15,
-        "umbral_alerta": 6.00,
-        "umbral_evacuacion": 6.50,
-        "precipitacion_acumulada_mm": 12.0,
-        "fuente": "INA - Sistema Nacional de Información Hídrica / Prefectura Naval",
-        "conectado": False,
-        "ultima_verificacion": "2026-08-04",
-    },
-    "barranqueras": {
-        "nombre": "Barranqueras",
-        "cuenca": "Río Paraná",
+CUENCAS: dict = {
+    "parana": {
+        "nombre": "Rio Parana",
+        "estacion": "Barranqueras",
         "nivel_metros": 3.22,
         "umbral_alerta": 6.00,
         "umbral_evacuacion": 6.50,
-        "precipitacion_acumulada_mm": 12.0,
-        "fuente": "INA - Sistema Nacional de Información Hídrica / Prefectura Naval",
+        "fuente": "INA - Sistema Nacional de Informacion Hidrica / Prefectura Naval",
         "conectado": False,
         "ultima_verificacion": "2026-08-04",
+    },
+    "paraguay": {
+        "nombre": "Rio Paraguay",
+        "estacion": "Puerto Bermejo / confluencia",
+        "nivel_metros": 4.10,
+        "umbral_alerta": 5.50,
+        "umbral_evacuacion": 6.00,
+        "fuente": "INA - Sistema Nacional de Informacion Hidrica",
+        "conectado": False,
+        "ultima_verificacion": "2026-08-04",
+    },
+    "bermejo": {
+        "nombre": "Rio Bermejo",
+        "estacion": "Presidencia de la Plaza (aprox.)",
+        "nivel_metros": 2.80,
+        "umbral_alerta": 4.50,
+        "umbral_evacuacion": 5.00,
+        "fuente": "Prefectura Naval Argentina (cobertura parcial)",
+        "conectado": False,
+        "ultima_verificacion": "2026-08-04",
+    },
+    "pilcomayo": {
+        "nombre": "Rio Pilcomayo",
+        "estacion": "Zona norte de Chaco / limite con Formosa",
+        "nivel_metros": 1.95,
+        "umbral_alerta": 3.50,
+        "umbral_evacuacion": 4.00,
+        "fuente": "Reportes Prefectura / Comision Binacional (sin API publica estable)",
+        "conectado": False,
+        "ultima_verificacion": "2026-08-04",
+    },
+}
+
+# ---------------------------------------------------------------------
+# LOCALIDADES — cada una con su cuenca_clave para poder agruparlas
+# ---------------------------------------------------------------------
+localidades: dict = {
+    "resistencia": {
+        "nombre": "Resistencia", "cuenca_clave": "parana", "nivel_metros": 3.15,
+        "umbral_alerta": 6.00, "umbral_evacuacion": 6.50, "precipitacion_acumulada_mm": 12.0,
+        "fuente": "INA - Sistema Nacional de Informacion Hidrica / Prefectura Naval",
+        "conectado": False, "ultima_verificacion": "2026-08-04",
+    },
+    "barranqueras": {
+        "nombre": "Barranqueras", "cuenca_clave": "parana", "nivel_metros": 3.22,
+        "umbral_alerta": 6.00, "umbral_evacuacion": 6.50, "precipitacion_acumulada_mm": 12.0,
+        "fuente": "INA - Sistema Nacional de Informacion Hidrica / Prefectura Naval",
+        "conectado": False, "ultima_verificacion": "2026-08-04",
     },
     "corrientes": {
-        "nombre": "Corrientes (capital)",
-        "cuenca": "Río Paraná",
-        "nivel_metros": 3.30,
-        "umbral_alerta": 6.00,
-        "umbral_evacuacion": 6.50,
-        "precipitacion_acumulada_mm": 11.0,
-        "fuente": "INA - Sistema Nacional de Información Hídrica / Prefectura Naval",
-        "conectado": False,
-        "ultima_verificacion": "2026-08-04",
+        "nombre": "Corrientes (capital)", "cuenca_clave": "parana", "nivel_metros": 3.30,
+        "umbral_alerta": 6.00, "umbral_evacuacion": 6.50, "precipitacion_acumulada_mm": 11.0,
+        "fuente": "INA - Sistema Nacional de Informacion Hidrica / Prefectura Naval",
+        "conectado": False, "ultima_verificacion": "2026-08-04",
     },
     "formosa": {
-        "nombre": "Formosa (capital)",
-        "cuenca": "Río Paraguay",
-        "nivel_metros": 4.05,
-        "umbral_alerta": 5.50,
-        "umbral_evacuacion": 6.00,
-        "precipitacion_acumulada_mm": 8.0,
-        "fuente": "INA - Sistema Nacional de Información Hídrica",
-        "conectado": False,
-        "ultima_verificacion": "2026-08-04",
+        "nombre": "Formosa (capital)", "cuenca_clave": "paraguay", "nivel_metros": 4.05,
+        "umbral_alerta": 5.50, "umbral_evacuacion": 6.00, "precipitacion_acumulada_mm": 8.0,
+        "fuente": "INA - Sistema Nacional de Informacion Hidrica",
+        "conectado": False, "ultima_verificacion": "2026-08-04",
     },
     "puerto_bermejo": {
-        "nombre": "Puerto Bermejo",
-        "cuenca": "Río Bermejo",
-        "nivel_metros": 2.75,
-        "umbral_alerta": 4.50,
-        "umbral_evacuacion": 5.00,
-        "precipitacion_acumulada_mm": 15.0,
+        "nombre": "Puerto Bermejo", "cuenca_clave": "bermejo", "nivel_metros": 2.75,
+        "umbral_alerta": 4.50, "umbral_evacuacion": 5.00, "precipitacion_acumulada_mm": 15.0,
         "fuente": "Prefectura Naval Argentina (cobertura parcial)",
-        "conectado": False,
-        "ultima_verificacion": "2026-08-04",
+        "conectado": False, "ultima_verificacion": "2026-08-04",
     },
     "el_sauzalito": {
-        "nombre": "El Sauzalito",
-        "cuenca": "Río Pilcomayo",
-        "nivel_metros": 1.90,
-        "umbral_alerta": 3.50,
-        "umbral_evacuacion": 4.00,
-        "precipitacion_acumulada_mm": 5.0,
-        "fuente": "Reportes Prefectura / Comisión Binacional (sin API pública estable)",
-        "conectado": False,
-        "ultima_verificacion": "2026-08-04",
+        "nombre": "El Sauzalito", "cuenca_clave": "pilcomayo", "nivel_metros": 1.90,
+        "umbral_alerta": 3.50, "umbral_evacuacion": 4.00, "precipitacion_acumulada_mm": 5.0,
+        "fuente": "Reportes Prefectura / Comision Binacional (sin API publica estable)",
+        "conectado": False, "ultima_verificacion": "2026-08-04",
     },
     "isla_del_cerrito": {
-        "nombre": "Isla del Cerrito",
-        "cuenca": "Río Paraná",
-        "nivel_metros": 3.35,
-        "umbral_alerta": 5.50,
-        "umbral_evacuacion": 6.00,
-        "precipitacion_acumulada_mm": 12.0,
-        "fuente": "INA - Sistema Nacional de Información Hídrica / Prefectura Naval",
-        "conectado": False,
-        "ultima_verificacion": "2026-08-04",
+        "nombre": "Isla del Cerrito", "cuenca_clave": "parana", "nivel_metros": 3.35,
+        "umbral_alerta": 5.50, "umbral_evacuacion": 6.00, "precipitacion_acumulada_mm": 12.0,
+        "fuente": "INA - Sistema Nacional de Informacion Hidrica / Prefectura Naval",
+        "conectado": False, "ultima_verificacion": "2026-08-04",
     },
     "puerto_vilelas": {
-        "nombre": "Puerto Vilelas",
-        "cuenca": "Río Paraná",
-        "nivel_metros": 3.20,
-        "umbral_alerta": 6.00,
-        "umbral_evacuacion": 6.50,
-        "precipitacion_acumulada_mm": 12.0,
-        "fuente": "INA - Sistema Nacional de Información Hídrica / Prefectura Naval",
-        "conectado": False,
-        "ultima_verificacion": "2026-08-04",
+        "nombre": "Puerto Vilelas", "cuenca_clave": "parana", "nivel_metros": 3.20,
+        "umbral_alerta": 6.00, "umbral_evacuacion": 6.50, "precipitacion_acumulada_mm": 12.0,
+        "fuente": "INA - Sistema Nacional de Informacion Hidrica / Prefectura Naval",
+        "conectado": False, "ultima_verificacion": "2026-08-04",
     },
     "la_leonesa": {
-        "nombre": "La Leonesa",
-        "cuenca": "Río Paraguay",
-        "nivel_metros": 3.90,
-        "umbral_alerta": 5.50,
-        "umbral_evacuacion": 6.00,
-        "precipitacion_acumulada_mm": 10.0,
-        "fuente": "INA - Sistema Nacional de Información Hídrica / Prefectura Naval",
-        "conectado": False,
-        "ultima_verificacion": "2026-08-04",
+        "nombre": "La Leonesa", "cuenca_clave": "paraguay", "nivel_metros": 3.90,
+        "umbral_alerta": 5.50, "umbral_evacuacion": 6.00, "precipitacion_acumulada_mm": 10.0,
+        "fuente": "INA - Sistema Nacional de Informacion Hidrica / Prefectura Naval",
+        "conectado": False, "ultima_verificacion": "2026-08-04",
     },
     "pampa_del_indio": {
-        "nombre": "Pampa del Indio",
-        "cuenca": "Río Bermejo",
-        "nivel_metros": 2.90,
-        "umbral_alerta": 4.50,
-        "umbral_evacuacion": 5.00,
-        "precipitacion_acumulada_mm": 15.0,
+        "nombre": "Pampa del Indio", "cuenca_clave": "bermejo", "nivel_metros": 2.90,
+        "umbral_alerta": 4.50, "umbral_evacuacion": 5.00, "precipitacion_acumulada_mm": 15.0,
         "fuente": "Prefectura Naval Argentina (cobertura parcial)",
-        "conectado": False,
-        "ultima_verificacion": "2026-08-04",
+        "conectado": False, "ultima_verificacion": "2026-08-04",
     },
     "villa_rio_bermejito": {
-        "nombre": "Villa Río Bermejito",
-        "cuenca": "Río Bermejo",
-        "nivel_metros": 2.70,
-        "umbral_alerta": 4.50,
-        "umbral_evacuacion": 5.00,
-        "precipitacion_acumulada_mm": 15.0,
+        "nombre": "Villa Rio Bermejito", "cuenca_clave": "bermejo", "nivel_metros": 2.70,
+        "umbral_alerta": 4.50, "umbral_evacuacion": 5.00, "precipitacion_acumulada_mm": 15.0,
         "fuente": "Prefectura Naval Argentina (cobertura parcial)",
-        "conectado": False,
-        "ultima_verificacion": "2026-08-04",
+        "conectado": False, "ultima_verificacion": "2026-08-04",
     },
     "fuerte_esperanza": {
-        "nombre": "Fuerte Esperanza",
-        "cuenca": "Río Pilcomayo",
-        "nivel_metros": 1.85,
-        "umbral_alerta": 3.50,
-        "umbral_evacuacion": 4.00,
-        "precipitacion_acumulada_mm": 6.0,
-        "fuente": "Reportes Prefectura / Comisión Binacional (sin API pública estable)",
-        "conectado": False,
-        "ultima_verificacion": "2026-08-04",
+        "nombre": "Fuerte Esperanza", "cuenca_clave": "pilcomayo", "nivel_metros": 1.85,
+        "umbral_alerta": 3.50, "umbral_evacuacion": 4.00, "precipitacion_acumulada_mm": 6.0,
+        "fuente": "Reportes Prefectura / Comision Binacional (sin API publica estable)",
+        "conectado": False, "ultima_verificacion": "2026-08-04",
     },
 }
 
@@ -207,7 +189,30 @@ clima = {
 
 
 # ---------------------------------------------------------------------
-# MODELOS para los endpoints de actualización manual
+# CLASIFICACION DE ESTADO (verde/amarillo/rojo) — compartida
+# ---------------------------------------------------------------------
+def calcular_estado(nivel: float, umbral_alerta: float, umbral_evacuacion: float):
+    if nivel >= umbral_evacuacion:
+        return "EVACUACION", "🔴"
+    if nivel >= umbral_alerta:
+        return "ALERTA", "🟡"
+    return "NORMAL", "🟢"
+
+
+def _cuenca_con_estado(clave: str) -> dict:
+    c = CUENCAS[clave]
+    estado, emoji = calcular_estado(c["nivel_metros"], c["umbral_alerta"], c["umbral_evacuacion"])
+    return {**c, "clave": clave, "estado": estado, "emoji": emoji}
+
+
+def _localidad_con_estado(clave: str) -> dict:
+    loc = localidades[clave]
+    estado, emoji = calcular_estado(loc["nivel_metros"], loc["umbral_alerta"], loc["umbral_evacuacion"])
+    return {**loc, "clave": clave, "estado": estado, "emoji": emoji}
+
+
+# ---------------------------------------------------------------------
+# MODELOS para los endpoints de actualizacion manual
 # ---------------------------------------------------------------------
 class ActualizacionHidrologia(BaseModel):
     localidad: str
@@ -225,46 +230,65 @@ class ActualizacionSatelital(BaseModel):
 # ---------------------------------------------------------------------
 @app.get("/")
 def raiz():
-    return {"servicio": "Portal Hídrico Chaco - API", "estado": "activo"}
+    return {"servicio": "Portal Hidrico Chaco - API", "estado": "activo"}
 
 
 @app.get("/localidades")
 def listar_localidades():
-    """Devuelve las 3 localidades con sus datos y explicación de cada campo."""
-    return {"localidades": localidades, "explicaciones": EXPLICACIONES}
+    """Devuelve todas las localidades con su estado calculado."""
+    return {
+        "localidades": {clave: _localidad_con_estado(clave) for clave in localidades},
+        "explicaciones": EXPLICACIONES,
+    }
 
 
 @app.get("/localidades/{clave}")
 def obtener_localidad(clave: str):
-    """Devuelve una localidad puntual (resistencia, barranqueras o formosa)."""
-    datos = localidades.get(clave.lower())
-    if datos is None:
+    clave = clave.lower()
+    if clave not in localidades:
         return {"error": f"Localidad '{clave}' no encontrada"}
-    return {"localidad": datos, "explicaciones": EXPLICACIONES}
+    return {"localidad": _localidad_con_estado(clave), "explicaciones": EXPLICACIONES}
+
+
+@app.get("/cuencas")
+def listar_cuencas():
+    """Devuelve las 4 cuencas con su estado calculado (para /cuencas del bot)."""
+    return {
+        "cuencas": {clave: _cuenca_con_estado(clave) for clave in CUENCAS},
+        "explicaciones": EXPLICACIONES,
+    }
+
+
+@app.get("/cuencas/{clave}")
+def obtener_cuenca(clave: str):
+    """Devuelve una cuenca puntual junto con las localidades que le pertenecen."""
+    clave = clave.lower()
+    if clave not in CUENCAS:
+        return {"error": f"Cuenca '{clave}' no encontrada"}
+    localidades_de_la_cuenca = [
+        _localidad_con_estado(c) for c, v in localidades.items() if v["cuenca_clave"] == clave
+    ]
+    return {
+        "cuenca": _cuenca_con_estado(clave),
+        "localidades": localidades_de_la_cuenca,
+        "explicaciones": EXPLICACIONES,
+    }
 
 
 @app.get("/bot/consultar")
 def consultar_para_bot():
-    """
-    Endpoint de compatibilidad con el dashboard de Streamlit actual,
-    que espera 'clima', 'hidrologia' (Barranqueras) y 'satelital_ndvi'.
-    """
+    """Endpoint de compatibilidad con el dashboard de Streamlit actual."""
+    barr = _localidad_con_estado("barranqueras")
     return {
         "clima": clima,
         "hidrologia": {
-            "estacion": localidades["barranqueras"]["nombre"],
-            "nivel_metros": localidades["barranqueras"]["nivel_metros"],
-            "estado": (
-                "EVACUACIÓN"
-                if localidades["barranqueras"]["nivel_metros"] >= localidades["barranqueras"]["umbral_evacuacion"]
-                else "ALERTA"
-                if localidades["barranqueras"]["nivel_metros"] >= localidades["barranqueras"]["umbral_alerta"]
-                else "NORMAL"
-            ),
-            "umbral_alerta": localidades["barranqueras"]["umbral_alerta"],
-            "umbral_evacuacion": localidades["barranqueras"]["umbral_evacuacion"],
-            "fuente": localidades["barranqueras"]["fuente"],
-            "ultima_verificacion": localidades["barranqueras"]["ultima_verificacion"],
+            "estacion": barr["nombre"],
+            "nivel_metros": barr["nivel_metros"],
+            "estado": barr["estado"],
+            "umbral_alerta": barr["umbral_alerta"],
+            "umbral_evacuacion": barr["umbral_evacuacion"],
+            "fuente": barr["fuente"],
+            "ultima_verificacion": barr["ultima_verificacion"],
         },
         "satelital_ndvi": satelital_ndvi,
     }
@@ -280,7 +304,7 @@ def actualizar_hidrologia(datos: ActualizacionHidrologia):
         localidades[clave]["precipitacion_acumulada_mm"] = datos.precipitacion_acumulada_mm
     localidades[clave]["conectado"] = True
     localidades[clave]["ultima_verificacion"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    return {"ok": True, "localidad": localidades[clave]}
+    return {"ok": True, "localidad": _localidad_con_estado(clave)}
 
 
 @app.post("/satelital/actualizar")
