@@ -1,0 +1,26 @@
+name: Actualizar ONI
+
+on:
+  schedule:
+    # El NOAA actualiza esta tabla una vez por mes; corremos cada
+    # lunes a las 12:00 UTC para no perdernos la actualizacion.
+    - cron: "0 12 * * 1"
+  workflow_dispatch: {}
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: pip install requests
+
+      - name: Correr el actualizador de ONI
+        run: python actualizar_oni.py
