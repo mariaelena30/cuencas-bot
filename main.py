@@ -239,6 +239,11 @@ class ActualizacionSatelital(BaseModel):
     condicion_vegetacion: str
 
 
+class ActualizacionClima(BaseModel):
+    fase_oni: str
+    ultimo_valor_oni: float
+
+
 # ---------------------------------------------------------------------
 # ENDPOINTS
 # ---------------------------------------------------------------------
@@ -328,3 +333,12 @@ def actualizar_satelital(datos: ActualizacionSatelital):
     satelital_ndvi["conectado"] = True
     satelital_ndvi["ultima_verificacion"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     return {"ok": True, "satelital_ndvi": satelital_ndvi}
+
+
+@app.post("/clima/actualizar")
+def actualizar_clima(datos: ActualizacionClima):
+    clima["fase_oni"] = datos.fase_oni
+    clima["ultimo_valor_oni"] = datos.ultimo_valor_oni
+    clima["conectado"] = True
+    clima["ultima_verificacion"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    return {"ok": True, "clima": clima}
