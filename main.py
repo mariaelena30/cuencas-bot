@@ -6,11 +6,14 @@ Telegram, asi no quedan datos duplicados y desincronizados entre
 proyectos.
 
 IMPORTANTE SOBRE LOS DATOS:
-Los valores de abajo son datos SEMILLA (de referencia/demostracion), no
-una conexion automatica en vivo. Cada localidad/cuenca indica
-'conectado: False' hasta que se integre su fuente real. Se actualizan
-a mano por ahora via los endpoints POST, o reemplazando los valores de
-este archivo.
+Los valores de abajo son datos SEMILLA (de referencia/demostracion)
+para las localidades sin fuente publica en vivo. Las localidades con
+estacion hidrometrica de Prefectura Naval (via CIM-UNL) se actualizan
+automaticamente con el script actualizar_niveles.py. Cada localidad
+indica 'conectado: True/False' segun corresponda.
+
+UMBRALES: verificados contra la tabla oficial de Prefectura Naval
+Argentina (fich.unl.edu.ar/cim/rios/parana/alturas) el 09/08/2026.
 """
 
 from datetime import datetime, timezone
@@ -59,7 +62,7 @@ CUENCAS: dict = {
         "nivel_metros": 3.22,
         "umbral_alerta": 6.00,
         "umbral_evacuacion": 6.50,
-        "fuente": "INA - Sistema Nacional de Informacion Hidrica / Prefectura Naval",
+        "fuente": "Prefectura Naval Argentina (via CIM-UNL)",
         "conectado": False,
         "ultima_verificacion": "2026-08-04",
     },
@@ -67,9 +70,9 @@ CUENCAS: dict = {
         "nombre": "Rio Paraguay",
         "estacion": "Puerto Bermejo / confluencia",
         "nivel_metros": 4.10,
-        "umbral_alerta": 5.50,
-        "umbral_evacuacion": 6.00,
-        "fuente": "INA - Sistema Nacional de Informacion Hidrica",
+        "umbral_alerta": 6.50,
+        "umbral_evacuacion": 7.00,
+        "fuente": "Prefectura Naval Argentina (via CIM-UNL)",
         "conectado": False,
         "ultima_verificacion": "2026-08-04",
     },
@@ -97,36 +100,47 @@ CUENCAS: dict = {
 
 # ---------------------------------------------------------------------
 # LOCALIDADES — cada una con su cuenca_clave para poder agruparlas
+#
+# Umbrales corregidos (verificados 09/08/2026 contra fich.unl.edu.ar):
+#   barranqueras       6.00 / 6.50  (ya coincidia)
+#   corrientes         6.00 / 6.50  ->  6.50 / 7.00
+#   formosa            5.50 / 6.00  ->  7.80 / 8.30
+#   isla_del_cerrito    5.50 / 6.00  ->  6.20 / 6.80
+#   puerto_bermejo     4.50 / 5.00  ->  6.50 / 7.00  (estacion "Bermejo")
+#   la_leonesa         5.50 / 6.00  ->  6.50 / 7.00  (estacion "Las Palmas")
+#   resistencia, puerto_vilelas: usan umbral de Barranqueras (mismo tramo)
+#   el_sauzalito, pampa_del_indio, villa_rio_bermejito, fuerte_esperanza:
+#     sin fuente publica de umbrales verificada, se mantienen como estaban
 # ---------------------------------------------------------------------
 localidades: dict = {
     "resistencia": {
         "nombre": "Resistencia", "cuenca_clave": "parana", "nivel_metros": 3.15,
         "umbral_alerta": 6.00, "umbral_evacuacion": 6.50, "precipitacion_acumulada_mm": 12.0,
-        "fuente": "INA - Sistema Nacional de Informacion Hidrica / Prefectura Naval",
+        "fuente": "Prefectura Naval Argentina, estacion Barranqueras (mismo tramo, ~8km)",
         "conectado": False, "ultima_verificacion": "2026-08-04",
     },
     "barranqueras": {
         "nombre": "Barranqueras", "cuenca_clave": "parana", "nivel_metros": 3.22,
         "umbral_alerta": 6.00, "umbral_evacuacion": 6.50, "precipitacion_acumulada_mm": 12.0,
-        "fuente": "INA - Sistema Nacional de Informacion Hidrica / Prefectura Naval",
+        "fuente": "Prefectura Naval Argentina, estacion Barranqueras (medicion directa)",
         "conectado": False, "ultima_verificacion": "2026-08-04",
     },
     "corrientes": {
         "nombre": "Corrientes (capital)", "cuenca_clave": "parana", "nivel_metros": 3.30,
-        "umbral_alerta": 6.00, "umbral_evacuacion": 6.50, "precipitacion_acumulada_mm": 11.0,
-        "fuente": "INA - Sistema Nacional de Informacion Hidrica / Prefectura Naval",
+        "umbral_alerta": 6.50, "umbral_evacuacion": 7.00, "precipitacion_acumulada_mm": 11.0,
+        "fuente": "Prefectura Naval Argentina, estacion Corrientes (medicion directa)",
         "conectado": False, "ultima_verificacion": "2026-08-04",
     },
     "formosa": {
         "nombre": "Formosa (capital)", "cuenca_clave": "paraguay", "nivel_metros": 4.05,
-        "umbral_alerta": 5.50, "umbral_evacuacion": 6.00, "precipitacion_acumulada_mm": 8.0,
-        "fuente": "INA - Sistema Nacional de Informacion Hidrica",
+        "umbral_alerta": 7.80, "umbral_evacuacion": 8.30, "precipitacion_acumulada_mm": 8.0,
+        "fuente": "Prefectura Naval Argentina, estacion Formosa (medicion directa)",
         "conectado": False, "ultima_verificacion": "2026-08-04",
     },
     "puerto_bermejo": {
-        "nombre": "Puerto Bermejo", "cuenca_clave": "bermejo", "nivel_metros": 2.75,
-        "umbral_alerta": 4.50, "umbral_evacuacion": 5.00, "precipitacion_acumulada_mm": 15.0,
-        "fuente": "Prefectura Naval Argentina (cobertura parcial)",
+        "nombre": "Puerto Bermejo", "cuenca_clave": "paraguay", "nivel_metros": 2.75,
+        "umbral_alerta": 6.50, "umbral_evacuacion": 7.00, "precipitacion_acumulada_mm": 15.0,
+        "fuente": "Prefectura Naval Argentina, estacion Bermejo (aproximado, zona de confluencia)",
         "conectado": False, "ultima_verificacion": "2026-08-04",
     },
     "el_sauzalito": {
@@ -136,21 +150,21 @@ localidades: dict = {
         "conectado": False, "ultima_verificacion": "2026-08-04",
     },
     "isla_del_cerrito": {
-        "nombre": "Isla del Cerrito", "cuenca_clave": "parana", "nivel_metros": 3.35,
-        "umbral_alerta": 5.50, "umbral_evacuacion": 6.00, "precipitacion_acumulada_mm": 12.0,
-        "fuente": "INA - Sistema Nacional de Informacion Hidrica / Prefectura Naval",
+        "nombre": "Isla del Cerrito", "cuenca_clave": "paraguay", "nivel_metros": 3.35,
+        "umbral_alerta": 6.20, "umbral_evacuacion": 6.80, "precipitacion_acumulada_mm": 12.0,
+        "fuente": "Prefectura Naval Argentina, estacion Isla del Cerrito (medicion directa)",
         "conectado": False, "ultima_verificacion": "2026-08-04",
     },
     "puerto_vilelas": {
         "nombre": "Puerto Vilelas", "cuenca_clave": "parana", "nivel_metros": 3.20,
         "umbral_alerta": 6.00, "umbral_evacuacion": 6.50, "precipitacion_acumulada_mm": 12.0,
-        "fuente": "INA - Sistema Nacional de Informacion Hidrica / Prefectura Naval",
+        "fuente": "Prefectura Naval Argentina, estacion Barranqueras (mismo tramo, ~5km)",
         "conectado": False, "ultima_verificacion": "2026-08-04",
     },
     "la_leonesa": {
         "nombre": "La Leonesa", "cuenca_clave": "paraguay", "nivel_metros": 3.90,
-        "umbral_alerta": 5.50, "umbral_evacuacion": 6.00, "precipitacion_acumulada_mm": 10.0,
-        "fuente": "INA - Sistema Nacional de Informacion Hidrica / Prefectura Naval",
+        "umbral_alerta": 6.50, "umbral_evacuacion": 7.00, "precipitacion_acumulada_mm": 10.0,
+        "fuente": "Prefectura Naval Argentina, estacion Las Palmas (aproximado, ~5km)",
         "conectado": False, "ultima_verificacion": "2026-08-04",
     },
     "pampa_del_indio": {
