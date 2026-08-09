@@ -1,4 +1,4 @@
-name: Actualizar niveles de rio
+name: actualizar niveles de rio
 
 on:
   schedule:
