@@ -20,6 +20,6 @@ jobs:
 
       - name: Instalar dependencias
         run: pip install requests beautifulsoup4 lxml
-
-      - name: Correr el actualizador de niveles
-        run: python actualizar_niveles.py
+        
+- name: Correr el actualizador de niveles
+  run: python path/to/actualizar_niveles.py
