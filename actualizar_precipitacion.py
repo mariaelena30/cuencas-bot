@@ -40,12 +40,17 @@ COORDENADAS = {
 }
 
 
-def obtener_precipitacion_24h(lat: float, lon: float) -> float:
+def obtener_precipitacion_24h(lat: float, lon: float, intentos: int = 3) -> float:
     """
     Devuelve la lluvia acumulada (mm) de las ultimas 24 horas para
     un punto, usando la API de pronostico horario de Open-Meteo con
     past_days=1 (trae el dia anterior completo + lo que va del actual).
+
+    Reintenta hasta 3 veces si hay un timeout o error de red pasajero,
+    con una breve espera entre intentos, antes de darse por vencido.
     """
+    import time
+
     params = {
         "latitude": lat,
         "longitude": lon,
@@ -54,11 +59,23 @@ def obtener_precipitacion_24h(lat: float, lon: float) -> float:
         "forecast_days": 1,
         "timezone": "America/Argentina/Buenos_Aires",
     }
-    resp = requests.get(
-        "https://api.open-meteo.com/v1/forecast", params=params, timeout=TIMEOUT
-    )
-    resp.raise_for_status()
-    datos = resp.json()
+
+    ultimo_error = None
+    for intento in range(1, intentos + 1):
+        try:
+            resp = requests.get(
+                "https://api.open-meteo.com/v1/forecast", params=params, timeout=20.0
+            )
+            resp.raise_for_status()
+            datos = resp.json()
+            break
+        except Exception as e:
+            ultimo_error = e
+            if intento < intentos:
+                time.sleep(3 * intento)  # espera un poco mas en cada reintento
+            continue
+    else:
+        raise ultimo_error
 
     horas = datos["hourly"]["time"]
     precipitacion = datos["hourly"]["precipitation"]
