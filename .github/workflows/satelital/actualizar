@@ -1,0 +1,27 @@
+name: Actualizar NDVI
+
+on:
+  schedule:
+    # MOD13Q1 es un compuesto de 16 dias, asi que corremos cada
+    # domingo a las 13:00 UTC, mas que suficiente para no perdernos
+    # ninguna actualizacion.
+    - cron: "0 13 * * 0"
+  workflow_dispatch: {}
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: pip install requests
+
+      - name: Correr el actualizador de NDVI
+        run: python actualizar_ndvi.py
