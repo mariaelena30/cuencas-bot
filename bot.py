@@ -128,6 +128,45 @@ def hacer_handler_ciudad(clave: str):
     return handler
 
 
+# ---------------------------------------------------------------------
+# AGREGAR a bot.py
+# ---------------------------------------------------------------------
+
+def formatear_barrio(datos: dict) -> str:
+    return (
+        f"{datos['emoji']} <b>{datos['nombre']}</b>\n"
+        f"{datos['motivo']}\n"
+        f"<i>Ubicación: {datos['precision']}</i>"
+    )
+
+
+async def barrios_vulnerables(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Comando /barrios: lista todos los barrios vulnerables conocidos."""
+    datos = _get("/barrios")
+    if not datos or "barrios" not in datos or not datos["barrios"]:
+        await update.message.reply_text("No pude consultar el backend, probá de nuevo en unos segundos.")
+        return
+    texto = "<b>📍 Barrios y zonas históricamente más vulnerables:</b>\n\n"
+    texto += "\n\n".join(formatear_barrio(b) for b in datos["barrios"].values())
+    texto += "\n\n<i>Basado en investigación histórica (crecidas de 1982, 1998, 2014, 2023), no es un registro oficial completo.</i>"
+    await update.message.reply_text(texto, parse_mode='HTML')
+
+
+# En hacer_handler_ciudad(), agregar despues de mostrar la localidad,
+# para que cada comando de localidad tambien muestre sus barrios:
+#
+#   barrios_data = _get(f"/barrios/{clave}")
+#   if barrios_data and barrios_data.get("barrios"):
+#       texto_extra = "\n\n📍 <b>Zonas vulnerables en esta localidad:</b>"
+#       for b in barrios_data["barrios"].values():
+#           texto_extra += f"\n{b['emoji']} {b['nombre']}"
+#       await update.message.reply_text(texto_extra, parse_mode='HTML')
+
+# En main(), agregar junto a los otros add_handler:
+#   app.add_handler(CommandHandler("barrios", barrios_vulnerables))
+
+# En start(), agregar a la lista de comandos:
+#   "/barrios - zonas históricamente más vulnerables\n"
 def main():
     if not TOKEN:
         raise RuntimeError(
