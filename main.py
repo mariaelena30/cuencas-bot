@@ -187,6 +187,59 @@ localidades: dict = {
     },
 }
 
+# ---------------------------------------------------------------------
+# BARRIOS VULNERABLES — puntos especificos DENTRO de una localidad que
+# son historicamente mas golpeados por las crecidas que el resto de la
+# ciudad. No tienen nivel de rio propio: heredan el estado (Normal/
+# Alerta/Evacuacion) de su localidad_padre. Son para dar mas precision
+# visual en el mapa, marcados con datos de investigacion historica,
+# no con medicion en vivo propia.
+#
+# IMPORTANTE SOBRE PRECISION: villa_rio_negro, san_pedro_pescador,
+# antequeras y la_floresta tienen coordenadas confirmadas via fuentes
+# publicas (OpenStreetMap/Mapcarta/derutasydestinos). santa_lucia y
+# mujeres_argentinas usan coordenadas APROXIMADAS (no se encontro un
+# registro con coordenadas exactas), aclarado en su campo "precision".
+# ---------------------------------------------------------------------
+BARRIOS_VULNERABLES: dict = {
+    "villa_rio_negro": {
+        "nombre": "Villa Río Negro", "localidad_padre": "resistencia",
+        "lat": -27.4253, "lon": -58.9764, "precision": "confirmada",
+        "motivo": "Inundado en la crecida de 1982 tras el colapso del dique del Río Negro",
+    },
+    "mujeres_argentinas": {
+        "nombre": "Mujeres Argentinas", "localidad_padre": "resistencia",
+        "lat": -27.4253, "lon": -58.9764, "precision": "aproximada (cerca de Villa Río Negro)",
+        "motivo": "Ex Golf Club; inundado en la crecida de 1982",
+    },
+    "santa_lucia": {
+        "nombre": "Santa Lucía", "localidad_padre": "resistencia",
+        "lat": -27.4200, "lon": -58.9800, "precision": "aproximada",
+        "motivo": "Identificado como uno de los barrios históricamente más afectados de Resistencia",
+    },
+    "san_pedro_pescador": {
+        "nombre": "San Pedro Pescador (Barrio de los Pescadores)", "localidad_padre": "barranqueras",
+        "lat": -27.46085, "lon": -58.86805, "precision": "confirmada",
+        "motivo": "Único asentamiento del Chaco sobre el cauce principal del Paraná; 43 familias autoevacuadas en 2014",
+    },
+    "antequeras": {
+        "nombre": "Puerto Antequeras", "localidad_padre": "barranqueras",
+        "lat": -27.4425, "lon": -58.8503, "precision": "confirmada",
+        "motivo": "Zona pesquera ribereña, afectada en múltiples crecidas históricas",
+    },
+    "la_floresta": {
+        "nombre": "La Floresta", "localidad_padre": "formosa",
+        "lat": -26.1547, "lon": -58.1794, "precision": "confirmada",
+        "motivo": "Junto al Riacho Formosa, que recibe agua de las crecidas del Pilcomayo y Bermejo",
+    },
+    "tres_bocas": {
+        "nombre": "Paraje Las Tres Bocas", "localidad_padre": "puerto_vilelas",
+        "lat": -27.5300, "lon": -58.8600, "precision": "aproximada",
+        "motivo": "Zona ribereña que queda aislada por tierra en crecidas grandes; en 2023, con Barranqueras en 6.54 m (evacuación), ~150 familias solo accedían en lancha desde Empedrado (Corrientes). Los parajes vecinos Soto y Cinco Bocas sufren el mismo aislamiento.",
+    },
+}
+
+
 satelital_ndvi = {
     "ndvi_promedio": 0.48,
     "condicion_vegetacion": "ESTABLE",
@@ -311,6 +364,35 @@ def consultar_para_bot():
         },
         "satelital_ndvi": satelital_ndvi,
     }
+
+
+@app.get("/barrios")
+def listar_barrios():
+    """Todos los barrios vulnerables, con el estado de su localidad padre."""
+    resultado = {}
+    for clave, b in BARRIOS_VULNERABLES.items():
+        padre = _localidad_con_estado(b["localidad_padre"])
+        resultado[clave] = {
+            **b, "clave": clave,
+            "estado": padre["estado"], "emoji": padre["emoji"],
+            "nombre_localidad_padre": padre["nombre"],
+        }
+    return {"barrios": resultado}
+
+
+@app.get("/barrios/{localidad_clave}")
+def barrios_de_localidad(localidad_clave: str):
+    """Barrios vulnerables que pertenecen a una localidad puntual (para el bot)."""
+    localidad_clave = localidad_clave.lower()
+    if localidad_clave not in localidades:
+        return {"error": f"Localidad '{localidad_clave}' no encontrada"}
+    padre = _localidad_con_estado(localidad_clave)
+    resultado = {
+        clave: {**b, "clave": clave, "estado": padre["estado"], "emoji": padre["emoji"]}
+        for clave, b in BARRIOS_VULNERABLES.items()
+        if b["localidad_padre"] == localidad_clave
+    }
+    return {"barrios": resultado}
 
 
 @app.post("/hidrologia/actualizar")
