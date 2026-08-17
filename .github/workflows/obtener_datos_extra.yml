@@ -1,5 +1,12 @@
 name: Obtener datos extra (CIMA + CEDEI)
 
+permissions:
+  contents: write
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */6 * * *'
 on:
   workflow_dispatch:
   schedule:
