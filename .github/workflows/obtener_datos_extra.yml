@@ -4,7 +4,6 @@ permissions:
   contents: write
 
 on:
-
   workflow_dispatch:
   schedule:
     # Corre cada 6 horas (UTC). Ajusta si querés otra frecuencia.
