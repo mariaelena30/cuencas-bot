@@ -1,6 +1,6 @@
 [
   {
-    "timestamp_consulta": "2026-08-18T00:31:47.165582+00:00",
+    "timestamp_consulta": "2026-08-18T06:21:29.853793+00:00",
     "puerto": "Barranqueras",
     "rio": "Parana",
     "altura_actual_m": 2.9,
@@ -12,7 +12,7 @@
     "cuenca_relacionada": "Tragadero / Negro-Salado"
   },
   {
-    "timestamp_consulta": "2026-08-18T00:31:47.165582+00:00",
+    "timestamp_consulta": "2026-08-18T06:21:29.853793+00:00",
     "puerto": "Bella Vista",
     "rio": "Parana",
     "altura_actual_m": 3.2,
@@ -24,7 +24,7 @@
     "cuenca_relacionada": "Referencia regional aguas abajo"
   },
   {
-    "timestamp_consulta": "2026-08-18T00:31:47.165582+00:00",
+    "timestamp_consulta": "2026-08-18T06:21:29.853793+00:00",
     "puerto": "Bermejo",
     "rio": "Paraguay",
     "altura_actual_m": 2.7,
@@ -36,7 +36,7 @@
     "cuenca_relacionada": "Cuenca del Rio Bermejo"
   },
   {
-    "timestamp_consulta": "2026-08-18T00:31:47.165582+00:00",
+    "timestamp_consulta": "2026-08-18T06:21:29.853793+00:00",
     "puerto": "Bouvier",
     "rio": "Paraguay",
     "altura_actual_m": null,
@@ -48,7 +48,7 @@
     "cuenca_relacionada": "Sin asociar"
   },
   {
-    "timestamp_consulta": "2026-08-18T00:31:47.165582+00:00",
+    "timestamp_consulta": "2026-08-18T06:21:29.853793+00:00",
     "puerto": "Corrientes",
     "rio": "Parana",
     "altura_actual_m": 2.92,
@@ -60,7 +60,7 @@
     "cuenca_relacionada": "Referencia regional (margen opuesta)"
   },
   {
-    "timestamp_consulta": "2026-08-18T00:31:47.165582+00:00",
+    "timestamp_consulta": "2026-08-18T06:21:29.853793+00:00",
     "puerto": "Empedrado",
     "rio": "Parana",
     "altura_actual_m": 2.87,
@@ -72,7 +72,7 @@
     "cuenca_relacionada": "Referencia regional aguas abajo"
   },
   {
-    "timestamp_consulta": "2026-08-18T00:31:47.165582+00:00",
+    "timestamp_consulta": "2026-08-18T06:21:29.853793+00:00",
     "puerto": "Formosa",
     "rio": "Paraguay",
     "altura_actual_m": 2.96,
@@ -84,7 +84,7 @@
     "cuenca_relacionada": "Referencia regional (Rio Paraguay)"
   },
   {
-    "timestamp_consulta": "2026-08-18T00:31:47.165582+00:00",
+    "timestamp_consulta": "2026-08-18T06:21:29.853793+00:00",
     "puerto": "Goya",
     "rio": "Parana",
     "altura_actual_m": 3.2,
@@ -96,7 +96,7 @@
     "cuenca_relacionada": "Referencia regional aguas abajo"
   },
   {
-    "timestamp_consulta": "2026-08-18T00:31:47.165582+00:00",
+    "timestamp_consulta": "2026-08-18T06:21:29.853793+00:00",
     "puerto": "Iguazu",
     "rio": "Iguazu",
     "altura_actual_m": 11.7,
@@ -108,7 +108,7 @@
     "cuenca_relacionada": "Sin asociar"
   },
   {
-    "timestamp_consulta": "2026-08-18T00:31:47.165582+00:00",
+    "timestamp_consulta": "2026-08-18T06:21:29.853793+00:00",
     "puerto": "Ita Ibate",
     "rio": "Parana",
     "altura_actual_m": 1.5,
@@ -120,7 +120,7 @@
     "cuenca_relacionada": "Sin asociar"
   },
   {
-    "timestamp_consulta": "2026-08-18T00:31:47.165582+00:00",
+    "timestamp_consulta": "2026-08-18T06:21:29.853793+00:00",
     "puerto": "Itati",
     "rio": "Parana",
     "altura_actual_m": 2.98,
@@ -132,7 +132,7 @@
     "cuenca_relacionada": "Sin asociar"
   },
   {
-    "timestamp_consulta": "2026-08-18T00:31:47.165582+00:00",
+    "timestamp_consulta": "2026-08-18T06:21:29.853793+00:00",
     "puerto": "Ituzaingo",
     "rio": "Parana",
     "altura_actual_m": 1.15,
@@ -144,7 +144,7 @@
     "cuenca_relacionada": "Sin asociar"
   },
   {
-    "timestamp_consulta": "2026-08-18T00:31:47.165582+00:00",
+    "timestamp_consulta": "2026-08-18T06:21:29.853793+00:00",
     "puerto": "Libertador",
     "rio": "Parana",
     "altura_actual_m": 7.6,
@@ -156,7 +156,7 @@
     "cuenca_relacionada": "Sin asociar"
   },
   {
-    "timestamp_consulta": "2026-08-18T00:31:47.165582+00:00",
+    "timestamp_consulta": "2026-08-18T06:21:29.853793+00:00",
     "puerto": "Paso de la Patria",
     "rio": "Parana",
     "altura_actual_m": 2.98,
@@ -168,7 +168,7 @@
     "cuenca_relacionada": "Referencia regional (cercano a confluencia Parana-Paraguay)"
   },
   {
-    "timestamp_consulta": "2026-08-18T00:31:47.165582+00:00",
+    "timestamp_consulta": "2026-08-18T06:21:29.853793+00:00",
     "puerto": "Pilcomayo",
     "rio": "Paraguay",
     "altura_actual_m": null,
@@ -180,7 +180,7 @@
     "cuenca_relacionada": "Sin asociar"
   },
   {
-    "timestamp_consulta": "2026-08-18T00:31:47.165582+00:00",
+    "timestamp_consulta": "2026-08-18T06:21:29.853793+00:00",
     "puerto": "Posadas",
     "rio": "Parana",
     "altura_actual_m": 10.24,
@@ -192,7 +192,7 @@
     "cuenca_relacionada": "Sin asociar"
   },
   {
-    "timestamp_consulta": "2026-08-18T00:31:47.165582+00:00",
+    "timestamp_consulta": "2026-08-18T06:21:29.853793+00:00",
     "puerto": "Puerto Mani",
     "rio": "Parana",
     "altura_actual_m": 4.11,
@@ -204,7 +204,7 @@
     "cuenca_relacionada": "Sin asociar"
   },
   {
-    "timestamp_consulta": "2026-08-18T00:31:47.165582+00:00",
+    "timestamp_consulta": "2026-08-18T06:21:29.853793+00:00",
     "puerto": "Santa Ana",
     "rio": "Parana",
     "altura_actual_m": 7.6,
