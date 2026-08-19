@@ -424,5 +424,6 @@ def actualizar_clima(datos: ActualizacionClima):
     clima["conectado"] = True
     clima["ultima_verificacion"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     return {"ok": True, "clima": clima}
-    from whatsapp_webhook import router as whatsapp_router
+
+from whatsapp_webhook import router as whatsapp_router
 app.include_router(whatsapp_router)
