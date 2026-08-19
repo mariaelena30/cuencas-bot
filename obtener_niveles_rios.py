@@ -166,9 +166,8 @@ def main():
     if data_cruda is None:
         sys.exit(1)
 
-       filas = procesar_estaciones(data_cruda)
+        filas = procesar_estaciones(data_cruda)
     publicar_al_backend(filas)
-
     if args.formato == "texto":
         imprimir_resumen(filas)
     elif args.formato == "csv":
