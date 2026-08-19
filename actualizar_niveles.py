@@ -29,7 +29,7 @@ from datetime import datetime, timezone
 import requests
 from bs4 import BeautifulSoup
 
-URL_FUENTE = "https://fich.unl.edu.ar/cim/rios/parana/alturas"
+URL_FUENTE = "http://wfich1.unl.edu.ar/cim/rios/parana/alturas"
 BACKEND_URL = "https://cuencas-bot.onrender.com"  # cambiar si el backend se muda
 TIMEOUT = 15.0
 
