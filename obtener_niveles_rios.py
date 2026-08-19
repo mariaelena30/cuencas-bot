@@ -109,7 +109,7 @@ def obtener_datos_crudos():
     )
 
     try:
-        with urlopen(req, timeout=15) as resp:
+        with urlopen(req, timeout=60.0) as resp:
             data = json.loads(
                 resp.read().decode("utf-8")
             )
