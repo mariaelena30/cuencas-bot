@@ -144,8 +144,8 @@ def main():
     print(f"\nResumen: {len(actualizadas)} actualizadas OK, {len(fallidas)} con error.")
     if fallidas:
         print("Fallidas:", fallidas)
+    if len(fallidas) > len(COORDENADAS) // 2:
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()
