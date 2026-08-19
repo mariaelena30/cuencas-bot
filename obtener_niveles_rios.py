@@ -5,22 +5,18 @@ Portal Hidrico Chaco - Proyecto 2HC26
 
 Obtiene los niveles hidrometricos en tiempo (casi) real del rio Parana y
 Paraguay desde el API publico del CIMA (Centro de Investigaciones del Mar
-y la Atmosfera, UBA/CONICET), y los relaciona con las 4 cuencas locales
-que monitorea el proyecto: Bermejo, Rio de Oro, Tragadero y Negro-Salado.
+y la Atmosfera, UBA/CONICET).
 
-Por que el nivel del Parana/Paraguay importa aunque monitoreemos cuencas
-locales: cuando el Parana esta alto, actua como un "tapon" que impide que
-los rios/riachos locales (Tragadero, Negro-Salado, Rio de Oro, Bermejo)
-drenen bien, generando anegamiento aguas arriba de la desembocadura -
-independientemente de si llovio localmente o no. Por eso el pipeline debe
-cruzar SIEMPRE altura del Parana + estado de la cuenca local.
+Relaciona las estaciones con las cuencas/localidades monitoreadas
+por el proyecto Portal Hidrico Chaco.
 
-Fuente: https://bermejo.cima.fcen.uba.ar/php/get_rios.php
-(Sin autenticacion, JSON publico, actualizacion diaria)
+Fuente:
+https://bermejo.cima.fcen.uba.ar/php/get_rios.php
 
 Uso:
     python obtener_niveles_rios.py
     python obtener_niveles_rios.py --formato csv
+    python obtener_niveles_rios.py --formato json
 """
 
 import argparse
@@ -31,19 +27,60 @@ from datetime import datetime, timezone
 from urllib.request import urlopen, Request
 from urllib.error import URLError, HTTPError
 
+
+# ============================================================
+# CONFIGURACION
+# ============================================================
+
 API_URL = "https://bermejo.cima.fcen.uba.ar/php/get_rios.php"
+
+BACKEND_URL = "https://cuencas-bot.onrender.com"
+
+
+# ============================================================
+# RELACION PUERTO -> CUENCA
+# ============================================================
 
 PUERTO_A_CUENCA = {
     "Barranqueras": "Tragadero / Negro-Salado",
-    "Corrientes":   "Referencia regional (margen opuesta)",
-    "Bermejo":      "Cuenca del Rio Bermejo",
-    "Formosa":      "Referencia regional (Rio Paraguay)",
-    "Empedrado":    "Referencia regional aguas abajo",
-    "Goya":         "Referencia regional aguas abajo",
-    "Bella Vista":  "Referencia regional aguas abajo",
-    "Paso de la Patria": "Referencia regional (cercano a confluencia "
-                         "Parana-Paraguay)",
+    "Corrientes": "Referencia regional (margen opuesta)",
+    "Bermejo": "Cuenca del Rio Bermejo",
+    "Formosa": "Referencia regional (Rio Paraguay)",
+    "Empedrado": "Referencia regional aguas abajo",
+    "Goya": "Referencia regional aguas abajo",
+    "Bella Vista": "Referencia regional aguas abajo",
+    "Paso de la Patria": (
+        "Referencia regional (cercano a confluencia "
+        "Parana-Paraguay)"
+    ),
 }
+
+
+# ============================================================
+# RELACION PUERTO -> LOCALIDADES DEL BACKEND
+# ============================================================
+
+MAPEO_PUERTO_A_LOCALIDAD = {
+    "Barranqueras": [
+        "barranqueras",
+        "resistencia",
+        "puerto_vilelas",
+    ],
+    "Corrientes": [
+        "corrientes",
+    ],
+    "Formosa": [
+        "formosa",
+    ],
+    "Bermejo": [
+        "puerto_bermejo",
+    ],
+}
+
+
+# ============================================================
+# CAMPOS DE SALIDA
+# ============================================================
 
 CAMPOS_SALIDA = [
     "timestamp_consulta",
@@ -59,149 +96,503 @@ CAMPOS_SALIDA = [
 ]
 
 
+# ============================================================
+# OBTENER DATOS DEL API DEL CIMA
+# ============================================================
+
 def obtener_datos_crudos():
-    req = Request(API_URL, headers={"User-Agent": "PortalHidricoChaco/1.0"})
+    req = Request(
+        API_URL,
+        headers={
+            "User-Agent": "PortalHidricoChaco/1.0"
+        },
+    )
+
     try:
         with urlopen(req, timeout=15) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
+            data = json.loads(
+                resp.read().decode("utf-8")
+            )
+
         return data
+
     except HTTPError as e:
-        print(f"[ERROR] El servidor respondio con error HTTP {e.code}", file=sys.stderr)
+        print(
+            f"[ERROR] El servidor respondio con error HTTP {e.code}",
+            file=sys.stderr,
+        )
+
     except URLError as e:
-        print(f"[ERROR] No se pudo conectar al API: {e.reason}", file=sys.stderr)
+        print(
+            f"[ERROR] No se pudo conectar al API: {e.reason}",
+            file=sys.stderr,
+        )
+
     except json.JSONDecodeError:
-        print("[ERROR] La respuesta no es JSON valido", file=sys.stderr)
+        print(
+            "[ERROR] La respuesta no es JSON valido",
+            file=sys.stderr,
+        )
+
     return None
 
 
+# ============================================================
+# PROCESAR ESTACIONES
+# ============================================================
+
 def procesar_estaciones(data_cruda):
+
     ahora = datetime.now(timezone.utc).isoformat()
+
     filas = []
 
     for est in data_cruda:
-        puerto = est.get("puerto", "").strip()
-        rio = est.get("rio", "").strip()
 
-        altura_str = est.get("altura", "").strip()
-        altura_ant_str = est.get("alturaAnt", "").strip()
+        puerto = est.get(
+            "puerto",
+            ""
+        ).strip()
+
+        rio = est.get(
+            "rio",
+            ""
+        ).strip()
+
+        altura_str = est.get(
+            "altura",
+            ""
+        ).strip()
+
+        altura_ant_str = est.get(
+            "alturaAnt",
+            ""
+        ).strip()
+
+        # ----------------------------------------------------
+        # ALTURA ACTUAL
+        # ----------------------------------------------------
 
         try:
-            altura = float(altura_str) if altura_str else None
+            altura = (
+                float(altura_str)
+                if altura_str
+                else None
+            )
+
         except ValueError:
             altura = None
+
+        # ----------------------------------------------------
+        # ALTURA ANTERIOR
+        # ----------------------------------------------------
+
         try:
-            altura_ant = float(altura_ant_str) if altura_ant_str else None
+            altura_ant = (
+                float(altura_ant_str)
+                if altura_ant_str
+                else None
+            )
+
         except ValueError:
             altura_ant = None
 
-        alerta = float(est.get("alerta", 0) or 0)
-        evacuacion = float(est.get("evacuacion", 0) or 0)
+        # ----------------------------------------------------
+        # NIVELES DE ALERTA Y EVACUACION
+        # ----------------------------------------------------
+
+        try:
+            alerta = float(
+                est.get("alerta", 0) or 0
+            )
+
+        except (ValueError, TypeError):
+            alerta = 0
+
+        try:
+            evacuacion = float(
+                est.get("evacuacion", 0) or 0
+            )
+
+        except (ValueError, TypeError):
+            evacuacion = 0
+
+        # ----------------------------------------------------
+        # CALCULAR TENDENCIA
+        # ----------------------------------------------------
 
         if altura is not None and altura_ant is not None:
-            diff = round(altura - altura_ant, 2)
+
+            diff = round(
+                altura - altura_ant,
+                2
+            )
+
             if diff > 0.01:
-                tendencia = f"subiendo (+{diff} m)"
+                tendencia = (
+                    f"subiendo (+{diff} m)"
+                )
+
             elif diff < -0.01:
-                tendencia = f"bajando ({diff} m)"
+                tendencia = (
+                    f"bajando ({diff} m)"
+                )
+
             else:
                 tendencia = "estable"
+
         else:
             tendencia = "sin dato"
 
-        distancia_alerta = round(alerta - altura, 2) if altura is not None else None
+        # ----------------------------------------------------
+        # DISTANCIA AL NIVEL DE ALERTA
+        # ----------------------------------------------------
 
-        filas.append({
-            "timestamp_consulta": ahora,
-            "puerto": puerto,
-            "rio": rio,
-            "altura_actual_m": altura,
-            "altura_anterior_m": altura_ant,
-            "tendencia": tendencia,
-            "nivel_alerta_m": alerta,
-            "nivel_evacuacion_m": evacuacion,
-            "distancia_a_alerta_m": distancia_alerta,
-            "cuenca_relacionada": PUERTO_A_CUENCA.get(puerto, "Sin asociar"),
-        })
+        if altura is not None:
+            distancia_alerta = round(
+                alerta - altura,
+                2
+            )
+        else:
+            distancia_alerta = None
+
+        # ----------------------------------------------------
+        # AGREGAR FILA
+        # ----------------------------------------------------
+
+        filas.append(
+            {
+                "timestamp_consulta": ahora,
+                "puerto": puerto,
+                "rio": rio,
+                "altura_actual_m": altura,
+                "altura_anterior_m": altura_ant,
+                "tendencia": tendencia,
+                "nivel_alerta_m": alerta,
+                "nivel_evacuacion_m": evacuacion,
+                "distancia_a_alerta_m": distancia_alerta,
+                "cuenca_relacionada": PUERTO_A_CUENCA.get(
+                    puerto,
+                    "Sin asociar",
+                ),
+            }
+        )
 
     return filas
 
 
+# ============================================================
+# MOSTRAR RESUMEN EN CONSOLA
+# ============================================================
+
 def imprimir_resumen(filas):
+
     print("=" * 78)
-    print(f"PORTAL HIDRICO CHACO - Niveles Parana/Paraguay ({datetime.now().strftime('%d/%m/%Y %H:%M')})")
+
+    print(
+        "PORTAL HIDRICO CHACO - "
+        "Niveles Parana/Paraguay "
+        f"({datetime.now().strftime('%d/%m/%Y %H:%M')})"
+    )
+
     print("=" * 78)
+
+    # --------------------------------------------------------
+    # ESTACIONES RELACIONADAS CON CUENCAS LOCALES
+    # --------------------------------------------------------
+
     for f in filas:
-        if f["cuenca_relacionada"] == "Sin asociar":
+
+        cuenca = f["cuenca_relacionada"]
+
+        if (
+            cuenca == "Sin asociar"
+            or "Referencia" in cuenca
+        ):
             continue
+
         altura = f["altura_actual_m"]
-        altura_txt = f"{altura:.2f} m" if altura is not None else "SIN DATO"
-        print(f"- {f['puerto']:<18} ({f['rio']:<9}) | altura: {altura_txt:<10} "
-              f"| {f['tendencia']:<18} | cuenca: {f['cuenca_relacionada']}")
+
+        if altura is not None:
+            altura_txt = f"{altura:.2f} m"
+        else:
+            altura_txt = "SIN DATO"
+
+        print(
+            f"- {f['puerto']:<18} "
+            f"({f['rio']:<9}) | "
+            f"altura: {altura_txt:<10} | "
+            f"{f['tendencia']:<18} | "
+            f"cuenca: {cuenca}"
+        )
+
     print("-" * 78)
-    print("Resto de estaciones (referencia regional):")
+
+    # --------------------------------------------------------
+    # ESTACIONES DE REFERENCIA REGIONAL
+    # --------------------------------------------------------
+
+    print(
+        "Resto de estaciones "
+        "(referencia regional):"
+    )
+
     for f in filas:
-        if f["cuenca_relacionada"] != "Sin asociar" and "Referencia" not in f["cuenca_relacionada"]:
+
+        cuenca = f["cuenca_relacionada"]
+
+        if (
+            cuenca != "Sin asociar"
+            and "Referencia" not in cuenca
+        ):
             continue
+
         altura = f["altura_actual_m"]
-        altura_txt = f"{altura:.2f} m" if altura is not None else "SIN DATO"
-        print(f"  {f['puerto']:<18} ({f['rio']:<9}) | altura: {altura_txt:<10} | {f['tendencia']}")
+
+        if altura is not None:
+            altura_txt = f"{altura:.2f} m"
+        else:
+            altura_txt = "SIN DATO"
+
+        print(
+            f"  {f['puerto']:<18} "
+            f"({f['rio']:<9}) | "
+            f"altura: {altura_txt:<10} | "
+            f"{f['tendencia']}"
+        )
+
     print("=" * 78)
 
 
-def guardar_csv(filas, ruta="niveles_rios.csv"):
-    with open(ruta, "w", newline="", encoding="utf-8") as fh:
-        writer = csv.DictWriter(fh, fieldnames=CAMPOS_SALIDA)
+# ============================================================
+# GUARDAR CSV
+# ============================================================
+
+def guardar_csv(
+    filas,
+    ruta="niveles_rios.csv",
+):
+
+    with open(
+        ruta,
+        "w",
+        newline="",
+        encoding="utf-8",
+    ) as fh:
+
+        writer = csv.DictWriter(
+            fh,
+            fieldnames=CAMPOS_SALIDA,
+        )
+
         writer.writeheader()
+
         writer.writerows(filas)
-    print(f"[OK] Guardado en {ruta}")
+
+    print(
+        f"[OK] Guardado en {ruta}"
+    )
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Niveles Parana/Paraguay - Portal Hidrico Chaco")
-    parser.add_argument("--formato", choices=["texto", "csv", "json"], default="texto")
-    parser.add_argument("--salida", default="niveles_rios.csv", help="Ruta del archivo de salida (csv/json)")
-    args = parser.parse_args()
-
-    data_cruda = obtener_datos_crudos()
-    if data_cruda is None:
-        sys.exit(1)
-
-        filas = procesar_estaciones(data_cruda)
-    publicar_al_backend(filas)
-    if args.formato == "texto":
-        imprimir_resumen(filas)
-    elif args.formato == "csv":
-        guardar_csv(filas, args.salida)
-    elif args.formato == "json":
-        with open(args.salida.replace(".csv", ".json"), "w", encoding="utf-8") as fh:
-            json.dump(filas, fh, ensure_ascii=False, indent=2)
-        print(f"[OK] Guardado en {args.salida.replace('.csv', '.json')}")
-
-BACKEND_URL = "https://cuencas-bot.onrender.com"
-
-MAPEO_PUERTO_A_LOCALIDAD = {
-    "Barranqueras": ["barranqueras", "resistencia", "puerto_vilelas"],
-    "Corrientes": ["corrientes"],
-    "Formosa": ["formosa"],
-    "Bermejo": ["puerto_bermejo"],
-}
+# ============================================================
+# PUBLICAR DATOS EN EL BACKEND
+# ============================================================
 
 def publicar_al_backend(filas):
+
     import requests
+
+    print()
+    print("=" * 78)
+    print("PUBLICANDO DATOS EN BACKEND")
+    print("=" * 78)
+
     for f in filas:
+
         puerto = f["puerto"]
+
         altura = f["altura_actual_m"]
-        if altura is None or puerto not in MAPEO_PUERTO_A_LOCALIDAD:
+
+        # ----------------------------------------------------
+        # IGNORAR SI NO HAY ALTURA
+        # ----------------------------------------------------
+
+        if altura is None:
             continue
+
+        # ----------------------------------------------------
+        # IGNORAR PUERTOS SIN LOCALIDAD CONFIGURADA
+        # ----------------------------------------------------
+
+        if puerto not in MAPEO_PUERTO_A_LOCALIDAD:
+            continue
+
+        # ----------------------------------------------------
+        # PUBLICAR EN CADA LOCALIDAD
+        # ----------------------------------------------------
+
         for localidad in MAPEO_PUERTO_A_LOCALIDAD[puerto]:
+
             try:
+
                 r = requests.post(
                     f"{BACKEND_URL}/hidrologia/actualizar",
-                    json={"localidad": localidad, "nivel_metros": altura},
+                    json={
+                        "localidad": localidad,
+                        "nivel_metros": altura,
+                    },
                     timeout=15.0,
                 )
-                print(f"{puerto} -> {localidad}: {altura} m (status {r.status_code})")
+
+                print(
+                    f"{puerto} -> "
+                    f"{localidad}: "
+                    f"{altura} m "
+                    f"(status {r.status_code})"
+                )
+
             except Exception as e:
-                print(f"[ERROR] {localidad}: {e}")
+
+                print(
+                    f"[ERROR] "
+                    f"{localidad}: {e}"
+                )
+
+    print("=" * 78)
+
+
+# ============================================================
+# FUNCION PRINCIPAL
+# ============================================================
+
+def main():
+
+    parser = argparse.ArgumentParser(
+        description=(
+            "Niveles Parana/Paraguay - "
+            "Portal Hidrico Chaco"
+        )
+    )
+
+    parser.add_argument(
+        "--formato",
+        choices=[
+            "texto",
+            "csv",
+            "json",
+        ],
+        default="texto",
+    )
+
+    parser.add_argument(
+        "--salida",
+        default="niveles_rios.csv",
+        help=(
+            "Ruta del archivo de salida "
+            "(csv/json)"
+        ),
+    )
+
+    args = parser.parse_args()
+
+    # --------------------------------------------------------
+    # 1. OBTENER DATOS
+    # --------------------------------------------------------
+
+    print(
+        "[1/4] Consultando API del CIMA..."
+    )
+
+    data_cruda = obtener_datos_crudos()
+
+    if data_cruda is None:
+        print(
+            "[ERROR] No se pudieron obtener "
+            "los datos."
+        )
+        sys.exit(1)
+
+    print(
+        "[OK] Datos obtenidos correctamente."
+    )
+
+    # --------------------------------------------------------
+    # 2. PROCESAR ESTACIONES
+    # --------------------------------------------------------
+
+    print(
+        "[2/4] Procesando estaciones..."
+    )
+
+    filas = procesar_estaciones(
+        data_cruda
+    )
+
+    print(
+        f"[OK] {len(filas)} estaciones procesadas."
+    )
+
+    # --------------------------------------------------------
+    # 3. PUBLICAR EN BACKEND
+    # --------------------------------------------------------
+
+    print(
+        "[3/4] Publicando datos en backend..."
+    )
+
+    publicar_al_backend(
+        filas
+    )
+
+    # --------------------------------------------------------
+    # 4. GENERAR SALIDA
+    # --------------------------------------------------------
+
+    print(
+        "[4/4] Generando salida..."
+    )
+
+    if args.formato == "texto":
+
+        imprimir_resumen(
+            filas
+        )
+
+    elif args.formato == "csv":
+
+        guardar_csv(
+            filas,
+            args.salida,
+        )
+
+    elif args.formato == "json":
+
+        ruta_json = args.salida.replace(
+            ".csv",
+            ".json",
+        )
+
+        with open(
+            ruta_json,
+            "w",
+            encoding="utf-8",
+        ) as fh:
+
+            json.dump(
+                filas,
+                fh,
+                ensure_ascii=False,
+                indent=2,
+            )
+
+        print(
+            f"[OK] Guardado en {ruta_json}"
+        )
+
+
+# ============================================================
+# PUNTO DE ENTRADA
+# ============================================================
+
 if __name__ == "__main__":
     main()
