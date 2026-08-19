@@ -177,6 +177,31 @@ def main():
             json.dump(filas, fh, ensure_ascii=False, indent=2)
         print(f"[OK] Guardado en {args.salida.replace('.csv', '.json')}")
 
+BACKEND_URL = "https://cuencas-bot.onrender.com"
 
+MAPEO_PUERTO_A_LOCALIDAD = {
+    "Barranqueras": ["barranqueras", "resistencia", "puerto_vilelas"],
+    "Corrientes": ["corrientes"],
+    "Formosa": ["formosa"],
+    "Bermejo": ["puerto_bermejo"],
+}
+
+def publicar_al_backend(filas):
+    import requests
+    for f in filas:
+        puerto = f["puerto"]
+        altura = f["altura_actual_m"]
+        if altura is None or puerto not in MAPEO_PUERTO_A_LOCALIDAD:
+            continue
+        for localidad in MAPEO_PUERTO_A_LOCALIDAD[puerto]:
+            try:
+                r = requests.post(
+                    f"{BACKEND_URL}/hidrologia/actualizar",
+                    json={"localidad": localidad, "nivel_metros": altura},
+                    timeout=15.0,
+                )
+                print(f"{puerto} -> {localidad}: {altura} m (status {r.status_code})")
+            except Exception as e:
+                print(f"[ERROR] {localidad}: {e}")
 if __name__ == "__main__":
     main()
