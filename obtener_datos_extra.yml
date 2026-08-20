@@ -1,0 +1,44 @@
+name: Obtener datos extra (CIMA + CEDEI)
+
+permissions:
+  contents: write
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Corre cada 6 horas (UTC). Ajusta si querés otra frecuencia.
+    - cron: '0 */6 * * *'
+
+jobs:
+  obtener-datos:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependencias
+        run: pip install requests
+
+      - name: Obtener niveles de rio (CIMA)
+        run: python obtener_niveles_rios.py --formato json --salida niveles_rios.json
+
+      - name: Obtener precipitacion (CEDEI)
+        run: python obtener_precipitacion_cedei.py --paginas 1 --csv precipitacion_cedei.csv
+        continue-on-error: true
+        # continue-on-error: si CEDEI cambia su HTML y el script falla,
+        # que no tumbe todo el workflow - igual queremos que se suba
+        # el archivo de niveles que sí funcionó.
+
+      - name: Commitear resultados al repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add niveles_rios.json precipitacion_cedei.csv 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "Actualiza datos CIMA/CEDEI [automatico]"
+          git push
