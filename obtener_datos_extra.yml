@@ -24,7 +24,8 @@ jobs:
 
       - name: Instalar dependencias
         run: pip install requests
-
+      - name: Instalar dependencias
+        run: pip install requests
       - name: Obtener niveles de rio (CIMA)
         run: python obtener_niveles_rios.py --formato json --salida niveles_rios.json
 
