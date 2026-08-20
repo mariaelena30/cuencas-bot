@@ -441,7 +441,7 @@ def publicar_al_backend(filas):
                         "localidad": localidad,
                         "nivel_metros": altura,
                     },
-                    timeout=15.0,
+                    timeout=35.0,
                 )
 
                 print(
