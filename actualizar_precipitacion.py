@@ -21,7 +21,7 @@ import requests
 TZ_CHACO = ZoneInfo("America/Argentina/Buenos_Aires")
 
 BACKEND_URL = "https://cuencas-bot.onrender.com"
-TIMEOUT = 15.0
+TIMEOUT = 35.0
 
 # Mismas coordenadas que ya usa el dashboard (panel_de_aplicacion.py)
 COORDENADAS = {
@@ -144,8 +144,8 @@ def main():
     print(f"\nResumen: {len(actualizadas)} actualizadas OK, {len(fallidas)} con error.")
     if fallidas:
         print("Fallidas:", fallidas)
-    if len(fallidas) > len(algo) // 2: # (o la lógica de corte que tenías)
-    sys.exit(1)
+    if fallidas:
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
