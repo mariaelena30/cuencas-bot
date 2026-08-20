@@ -6,7 +6,7 @@ permissions:
 on:
   workflow_dispatch:
   schedule:
-    # Corre cada 6 horas (UTC). Ajusta si querés otra frecuencia.
+    # Corre cada 6 horas (UTC). Ajusta si queres otra frecuencia.
     - cron: '0 */6 * * *'
 
 jobs:
@@ -24,8 +24,7 @@ jobs:
 
       - name: Instalar dependencias
         run: pip install requests
-      - name: Instalar dependencias
-        run: pip install requests
+
       - name: Obtener niveles de rio (CIMA)
         run: python obtener_niveles_rios.py --formato json --salida niveles_rios.json
 
@@ -34,7 +33,7 @@ jobs:
         continue-on-error: true
         # continue-on-error: si CEDEI cambia su HTML y el script falla,
         # que no tumbe todo el workflow - igual queremos que se suba
-        # el archivo de niveles que sí funcionó.
+        # el archivo de niveles que si funciono.
 
       - name: Commitear resultados al repo
         run: |
