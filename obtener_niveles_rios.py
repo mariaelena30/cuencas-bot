@@ -22,8 +22,9 @@ Uso:
 import argparse
 import csv
 import json
+import os
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.request import urlopen, Request
 from urllib.error import URLError, HTTPError
 
@@ -462,6 +463,52 @@ def publicar_al_backend(filas):
 
 
 # ============================================================
+# GUARDAR JSON EN MODO HISTORICO (append, no overwrite)
+# ============================================================
+
+def guardar_json_historico(filas, ruta="niveles_rios.json", dias_a_conservar=60):
+    """
+    Antes esto sobrescribia niveles_rios.json en cada corrida, asi que
+    calcular_tendencia.py nunca tenia mas de una lectura para trabajar.
+    Ahora: lee el historico existente, le agrega las lecturas nuevas de
+    esta corrida, y guarda todo junto. Recorta lecturas mas viejas que
+    `dias_a_conservar` para que el archivo no crezca para siempre
+    (con 4 corridas/dia via el workflow de cada 6hs, 60 dias son
+    unas pocas miles de filas - nada que rompa el repo).
+    """
+    historico = []
+    if os.path.exists(ruta):
+        try:
+            with open(ruta, "r", encoding="utf-8") as fh:
+                contenido = json.load(fh)
+            if isinstance(contenido, list):
+                historico = contenido
+        except (json.JSONDecodeError, OSError) as e:
+            print(f"[AVISO] No se pudo leer el historico existente ({e}), se arranca uno nuevo.")
+
+    historico.extend(filas)
+
+    limite = datetime.now(timezone.utc) - timedelta(days=dias_a_conservar)
+
+    def _es_reciente(fila):
+        try:
+            fecha = datetime.fromisoformat(fila["timestamp_consulta"].replace("Z", "+00:00"))
+            if fecha.tzinfo is None:
+                fecha = fecha.replace(tzinfo=timezone.utc)
+            return fecha >= limite
+        except (KeyError, ValueError, TypeError, AttributeError):
+            return True  # si no se puede leer la fecha, no se descarta por las dudas
+
+    historico = [f for f in historico if _es_reciente(f)]
+
+    with open(ruta, "w", encoding="utf-8") as fh:
+        json.dump(historico, fh, ensure_ascii=False, indent=2)
+
+    print(f"[OK] Historico actualizado en {ruta}: {len(historico)} lecturas guardadas "
+          f"(se conservan los ultimos {dias_a_conservar} dias).")
+
+
+# ============================================================
 # FUNCION PRINCIPAL
 # ============================================================
 
@@ -572,22 +619,7 @@ def main():
             ".json",
         )
 
-        with open(
-            ruta_json,
-            "w",
-            encoding="utf-8",
-        ) as fh:
-
-            json.dump(
-                filas,
-                fh,
-                ensure_ascii=False,
-                indent=2,
-            )
-
-        print(
-            f"[OK] Guardado en {ruta_json}"
-        )
+        guardar_json_historico(filas, ruta_json)
 
 
 # ============================================================
