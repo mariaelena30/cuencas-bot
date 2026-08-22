@@ -4,3 +4,4 @@ uvicorn
 streamlit
 requests
 python-telegram-bot
+Python 3.14.7
