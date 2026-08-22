@@ -1,5 +1,5 @@
-python-telegram-bot~=21.8
 fastapi
-uvicorn[standard]
-python-dotenv
-requests
+uvicorn
+python-telegram-bot
+supabase
+pydantic
