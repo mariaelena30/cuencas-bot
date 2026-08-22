@@ -3,5 +3,5 @@ fastapi
 uvicorn
 streamlit
 requests
-python-telegram-bot
+python-telegram-bot==22.8
 Python 3.14.7
