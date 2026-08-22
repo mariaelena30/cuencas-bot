@@ -1,4 +1,4 @@
 streamlit
 requests
 python-telegram-bot
-Python 3.14.7
+Python 3.11.9
