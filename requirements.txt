@@ -1,5 +1,4 @@
-fastapi
-uvicorn
-python-telegram-bot
-supabase
-pydantic
+streamlit
+requests
+folium
+streamlit-folium
