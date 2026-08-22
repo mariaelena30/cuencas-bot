@@ -1,4 +1,6 @@
+paho-mqtt>=2.1.0
+fastapi
+uvicorn
 streamlit
 requests
-folium
-streamlit-folium
+python-telegram-bot
