@@ -16,7 +16,8 @@ UMBRALES: verificados contra la tabla oficial de Prefectura Naval
 Argentina (fich.unl.edu.ar/cim/rios/parana/alturas) el 09/08/2026.
 """
 
-from datetime import datetime, timezone
+import json
+from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -300,6 +301,50 @@ class ActualizacionClima(BaseModel):
 # ---------------------------------------------------------------------
 # ENDPOINTS
 # ---------------------------------------------------------------------
+@app.get("/historico/{estacion}")
+def obtener_historico(estacion: str, dias: int = 60):
+    """
+    Serie historica de niveles para una estacion de niveles_rios.json
+    (ej. "Barranqueras", "Corrientes", "Formosa"). Alimenta el grafico
+    de tendencia del dashboard. Comparacion case-insensitive.
+
+    Nota: los nombres de estacion en niveles_rios.json vienen del
+    pipeline CIM-UNL y no son 1 a 1 con las 12 localidades monitoreadas
+    - varias localidades comparten estacion (ej. resistencia y
+    puerto_vilelas usan la estacion Barranqueras) y algunas localidades
+    todavia no tienen estacion con historico disponible.
+    """
+    try:
+        with open("niveles_rios.json", "r", encoding="utf-8") as fh:
+            historico = json.load(fh)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {"estacion": estacion, "lecturas": [], "error": "Historico no disponible todavia."}
+
+    limite = datetime.now(timezone.utc) - timedelta(days=dias)
+
+    def _fecha(fila):
+        try:
+            f = datetime.fromisoformat(fila["timestamp_consulta"].replace("Z", "+00:00"))
+            return f if f.tzinfo else f.replace(tzinfo=timezone.utc)
+        except (KeyError, ValueError, TypeError):
+            return None
+
+    lecturas = []
+    for fila in historico:
+        if fila.get("puerto", "").strip().lower() != estacion.strip().lower():
+            continue
+        fecha = _fecha(fila)
+        if fecha is None or fecha < limite:
+            continue
+        lecturas.append({
+            "fecha": fila["timestamp_consulta"],
+            "altura_m": fila.get("altura_actual_m"),
+        })
+
+    lecturas.sort(key=lambda l: l["fecha"])
+    return {"estacion": estacion, "lecturas": lecturas, "n_lecturas": len(lecturas)}
+
+
 @app.get("/")
 def raiz():
     return {"servicio": "Portal Hidrico Chaco - API", "estado": "activo"}
