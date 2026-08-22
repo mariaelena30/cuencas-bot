@@ -470,5 +470,100 @@ def actualizar_clima(datos: ActualizacionClima):
     clima["ultima_verificacion"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     return {"ok": True, "clima": clima}
 
+
+# ---------------------------------------------------------------------
+# SOS Y REPORTES CIUDADANOS (Prioridad 1 del roadmap)
+#
+# NOTA IMPORTANTE: igual que el resto de los datos de este backend,
+# esto vive EN MEMORIA (listas de Python) - se pierde si Render
+# reinicia el servicio. Es el mismo pendiente de siempre (migrar a
+# Supabase), no algo nuevo que se agrega con esta funcionalidad.
+# ---------------------------------------------------------------------
+tickets_sos: list = []
+reportes_ciudadanos: list = []
+
+
+class SolicitudSOS(BaseModel):
+    nombre: str
+    telefono: str
+    localidad: str
+    direccion: str | None = None
+    lat: float
+    lon: float
+    personas_afectadas: int = 1
+    altura_agua_cm: int | None = None
+    nivel_urgencia: str = "ALTO"  # ALTO / MEDIO / BAJO
+    requiere: list[str] = []
+    notas: str | None = None
+
+
+class ActualizacionSOS(BaseModel):
+    estado: str  # PENDIENTE / DESPACHADO / RESUELTO
+    unidad_asignada: str | None = None
+    notas_despacho: str | None = None
+
+
+class ReporteCiudadano(BaseModel):
+    nombre: str
+    localidad: str
+    calle: str
+    lat: float
+    lon: float
+    nivel_agua_aprox: str = "CORDON"  # CORDON / TOBILLO / RODILLA / CINTURA / ENTRO_A_CASA
+    descripcion: str | None = None
+
+
+@app.post("/sos")
+def crear_solicitud_sos(datos: SolicitudSOS):
+    if datos.localidad.lower() not in localidades:
+        return {"error": f"Localidad '{datos.localidad}' no reconocida"}
+    ticket = {
+        "id": f"sos_{int(datetime.now(timezone.utc).timestamp() * 1000)}",
+        "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        **datos.model_dump(),
+        "estado": "PENDIENTE",
+        "unidad_asignada": None,
+        "notas_despacho": None,
+    }
+    tickets_sos.insert(0, ticket)
+    return {"ok": True, "ticket": ticket}
+
+
+@app.get("/sos")
+def listar_solicitudes_sos():
+    return {"tickets": tickets_sos}
+
+
+@app.patch("/sos/{ticket_id}")
+def actualizar_solicitud_sos(ticket_id: str, datos: ActualizacionSOS):
+    ticket = next((t for t in tickets_sos if t["id"] == ticket_id), None)
+    if ticket is None:
+        return {"error": f"Ticket '{ticket_id}' no encontrado"}
+    ticket["estado"] = datos.estado
+    if datos.unidad_asignada is not None:
+        ticket["unidad_asignada"] = datos.unidad_asignada
+    if datos.notas_despacho is not None:
+        ticket["notas_despacho"] = datos.notas_despacho
+    return {"ok": True, "ticket": ticket}
+
+
+@app.post("/reportes")
+def crear_reporte_ciudadano(datos: ReporteCiudadano):
+    if datos.localidad.lower() not in localidades:
+        return {"error": f"Localidad '{datos.localidad}' no reconocida"}
+    reporte = {
+        "id": f"rep_{int(datetime.now(timezone.utc).timestamp() * 1000)}",
+        "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        **datos.model_dump(),
+    }
+    reportes_ciudadanos.insert(0, reporte)
+    return {"ok": True, "reporte": reporte}
+
+
+@app.get("/reportes")
+def listar_reportes_ciudadanos():
+    return {"reportes": reportes_ciudadanos}
+
+
 from whatsapp_webhook import router as whatsapp_router
 app.include_router(whatsapp_router)
