@@ -1,7 +1,4 @@
-paho-mqtt>=2.1.0
-fastapi
-uvicorn
 streamlit
 requests
-python-telegram-bot==22.8
-
+python-telegram-bot
+Python 3.14.7
