@@ -20,9 +20,21 @@ import json
 from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 app = FastAPI(title="Portal Hidrico Chaco - API")
+
+# Permite que el frontend (Vercel, o localhost mientras desarrollas)
+# llame a esta API desde el navegador. Sin esto, el navegador bloquea
+# las peticiones por la politica de CORS.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # En produccion, mejor restringir a tu dominio de Vercel
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ---------------------------------------------------------------------
 # EXPLICACIONES EN LENGUAJE SIMPLE
@@ -207,36 +219,57 @@ BARRIOS_VULNERABLES: dict = {
         "nombre": "Villa Río Negro", "localidad_padre": "resistencia",
         "lat": -27.4253, "lon": -58.9764, "precision": "confirmada",
         "motivo": "Inundado en la crecida de 1982 tras el colapso del dique del Río Negro",
+        "cota_inundacion_m": 4.80, "familias_estimadas": 340,
+        "via_acceso_critica": "Av. Sabin y Puente San Fernando (se corta por agua)",
     },
     "mujeres_argentinas": {
         "nombre": "Mujeres Argentinas", "localidad_padre": "resistencia",
         "lat": -27.4253, "lon": -58.9764, "precision": "aproximada (cerca de Villa Río Negro)",
         "motivo": "Ex Golf Club; inundado en la crecida de 1982",
+        "cota_inundacion_m": 5.10, "familias_estimadas": 520,
+        "via_acceso_critica": "Av. Viuda de Ross / Av. San Martín",
     },
     "santa_lucia": {
         "nombre": "Santa Lucía", "localidad_padre": "resistencia",
         "lat": -27.4200, "lon": -58.9800, "precision": "aproximada",
         "motivo": "Identificado como uno de los barrios históricamente más afectados de Resistencia",
+        "cota_inundacion_m": 4.95, "familias_estimadas": 280,
+        "via_acceso_critica": "Av. Lavalle prolongación norte",
     },
     "san_pedro_pescador": {
         "nombre": "San Pedro Pescador (Barrio de los Pescadores)", "localidad_padre": "barranqueras",
         "lat": -27.46085, "lon": -58.86805, "precision": "confirmada",
         "motivo": "Único asentamiento del Chaco sobre el cauce principal del Paraná; 43 familias autoevacuadas en 2014",
+        "cota_inundacion_m": 5.60, "familias_estimadas": 190,
+        "via_acceso_critica": "Rampa de bajada del Puente General Belgrano (se corta con 6.20m)",
     },
     "antequeras": {
         "nombre": "Puerto Antequeras", "localidad_padre": "barranqueras",
         "lat": -27.4425, "lon": -58.8503, "precision": "confirmada",
         "motivo": "Zona pesquera ribereña, afectada en múltiples crecidas históricas",
+        "cota_inundacion_m": 5.40, "familias_estimadas": 110,
+        "via_acceso_critica": "Camino costero desde Barranqueras (intransitable con lluvia)",
     },
     "la_floresta": {
         "nombre": "La Floresta", "localidad_padre": "formosa",
         "lat": -26.1547, "lon": -58.1794, "precision": "confirmada",
         "motivo": "Junto al Riacho Formosa, que recibe agua de las crecidas del Pilcomayo y Bermejo",
+        "cota_inundacion_m": 7.20, "familias_estimadas": 410,
+        "via_acceso_critica": "Av. Ribereña y accesos secundarios de tierra",
     },
     "tres_bocas": {
         "nombre": "Paraje Las Tres Bocas", "localidad_padre": "puerto_vilelas",
         "lat": -27.5300, "lon": -58.8600, "precision": "aproximada",
         "motivo": "Zona ribereña que queda aislada por tierra en crecidas grandes; en 2023, con Barranqueras en 6.54 m (evacuación), ~150 familias solo accedían en lancha desde Empedrado (Corrientes). Los parajes vecinos Soto y Cinco Bocas sufren el mismo aislamiento.",
+        "cota_inundacion_m": 5.80, "familias_estimadas": 165,
+        "via_acceso_critica": "Camino vecinal del Paranacito (inundable) / Acceso fluvial",
+    },
+    "parajes_sauzalito": {
+        "nombre": "Comunidades Wichí y Parajes (El Sauzal, Tartagal, Tres Pozos)", "localidad_padre": "el_sauzalito",
+        "lat": -24.3800, "lon": -61.6200, "precision": "territorial dispersa, sin coordenadas exactas por paraje",
+        "motivo": "Cortes recurrentes de caminos por crecientes del río Bermejo y desbordes de cañadas. Pérdida de conectividad celular y aislamiento alimentario.",
+        "cota_inundacion_m": 4.20, "familias_estimadas": 650,
+        "via_acceso_critica": "Ruta Provincial 3 y picadas de tierra (intransitables)",
     },
 }
 
@@ -301,6 +334,41 @@ class ActualizacionClima(BaseModel):
 # ---------------------------------------------------------------------
 # ENDPOINTS
 # ---------------------------------------------------------------------
+@app.get("/nota-tecnica-enso")
+def obtener_nota_tecnica_enso():
+    """
+    Ultima Nota Tecnica Conjunta UNNE/UFSM/APA Chaco sobre El Nino,
+    detectada automaticamente via actualizar_nota_tecnica.py (Zenodo API).
+    Reemplaza/complementa el indice ONI generico con una fuente oficial
+    citable y especifica para la region.
+    """
+    try:
+        with open("nota_tecnica_enso.json", "r", encoding="utf-8") as fh:
+            return json.load(fh)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {"encontrada": False, "aviso": "Todavia no corrio actualizar_nota_tecnica.py"}
+
+
+@app.get("/vertederos")
+def obtener_estado_vertederos():
+    """
+    Estado de los vertederos de Itaipu/Yacyreta (alerta temprana para
+    el Parana), generado por actualizar_vertederos.py via GitHub Actions.
+    Si el archivo todavia no existe (primera corrida no hecha aun),
+    devuelve un estado vacio en vez de romper.
+    """
+    try:
+        with open("vertederos_estado.json", "r", encoding="utf-8") as fh:
+            return json.load(fh)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {
+            "vertederos": {},
+            "alerta_temprana": {"hay_alerta": False, "avisos": []},
+            "actualizado": None,
+            "aviso": "Todavia no corrio actualizar_vertederos.py",
+        }
+
+
 @app.get("/historico/{estacion}")
 def obtener_historico(estacion: str, dias: int = 60):
     """
