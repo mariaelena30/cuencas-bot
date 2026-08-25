@@ -1,0 +1,32 @@
+name: Buscar última Nota Técnica ENSO (UNNE/UFSM/APA)
+
+on:
+  schedule:
+    # Semanal (lunes 09:00 UTC) - estas notas salen cada varias semanas,
+    # no hace falta consultar mas seguido que eso.
+    - cron: "0 9 * * 1"
+  workflow_dispatch: {}  # para correrlo a mano y probar hoy mismo
+
+permissions:
+  contents: write
+
+jobs:
+  buscar-nota-tecnica:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Correr script
+        run: python actualizar_nota_tecnica.py
+
+      - name: Commit y push si hubo cambios
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add nota_tecnica_enso.json
+          git diff --quiet --cached || git commit -m "Actualizar Nota Técnica ENSO [automatico]"
+          git push
