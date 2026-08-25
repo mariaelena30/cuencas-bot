@@ -35,22 +35,23 @@ from email.utils import parsedate_to_datetime
 REPRESAS = {
     "itaipu": {
         "nombre": "Itaipú",
-        "query": "Itaipú vertedero OR compuertas",
-        # Tiempo aproximado historico hasta que el efecto se nota en
-        # Corrientes/Chaco. Es una REGLA DE DEDO basada en casos pasados
-        # (ej. apertura del 1/nov/2023 -> alerta en Corrientes ~3-5 dias
-        # despues), no un modelo hidraulico de propagacion de onda.
+        "query": "Itaipú vertedero OR compuertas when:30d",
         "dias_hasta_corrientes_aprox": "4 a 7 dias",
     },
     "yacyreta": {
         "nombre": "Yacyretá",
-        "query": "Yacyretá vertedero OR compuertas",
-        # Yacyreta esta mucho mas cerca de Corrientes/Chaco que Itaipu
-        # (aprox. 300km rio abajo vs. los mas de 600km de Itaipu), asi
-        # que el efecto se siente mas rapido.
+        "query": "Yacyretá vertedero OR compuertas when:30d",
         "dias_hasta_corrientes_aprox": "1 a 3 dias",
     },
 }
+
+# Si el evento clasificado mas reciente tiene mas dias que esto, no
+# se muestra como "ABIERTO"/"CERRADO" actual - se marca como
+# desactualizado. Bug real encontrado en la primera prueba: Yacyreta
+# mostraba "ABIERTO" citando una nota de 2023 (1023 dias), porque el
+# filtro "when:30d" todavia no existia y ningun medio habia cubierto
+# nada reciente sobre Yacyreta especificamente.
+DIAS_MAXIMOS_VIGENCIA = 45
 
 PALABRAS_APERTURA = ["abre", "abrió", "abrio", "reabre", "reabrió", "apertura", "abren"]
 PALABRAS_CIERRE = ["cierra", "cerró", "cerro", "cierre", "cerraron"]
@@ -147,6 +148,20 @@ def detectar_estado_represa(clave: str, config: dict) -> dict:
 
     fecha_evento = datetime.fromisoformat(evento_mas_reciente["fecha"])
     dias_desde_evento = (datetime.now(timezone.utc) - fecha_evento).days
+
+    # Si lo mas reciente que encontramos ya es viejo, no lo mostramos
+    # como estado ACTUAL (bug real detectado: una nota de 2023 sobre
+    # Yacyreta aparecia como "ABIERTO" sin aclarar que tenia 1023 dias).
+    if dias_desde_evento > DIAS_MAXIMOS_VIGENCIA:
+        return {
+            "nombre": config["nombre"],
+            "estado": "SIN_DATOS_RECIENTES",
+            "detalle": (
+                f"La noticia más reciente encontrada tiene {dias_desde_evento} días "
+                f"({evento_mas_reciente['titulo']}) — demasiado vieja para reflejar el estado actual."
+            ),
+            "ultima_verificacion": datetime.now(timezone.utc).isoformat(),
+        }
 
     return {
         "nombre": config["nombre"],
