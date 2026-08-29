@@ -17,6 +17,7 @@ Argentina (fich.unl.edu.ar/cim/rios/parana/alturas) el 09/08/2026.
 """
 
 import json
+import os
 from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI
@@ -24,6 +25,27 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 app = FastAPI(title="Portal Hidrico Chaco - API")
+
+# ---------------------------------------------------------------------
+# SUPABASE (persistencia real para SOS y reportes ciudadanos)
+#
+# Si SUPABASE_URL y SUPABASE_KEY estan configuradas (en Render: Settings
+# -> Environment), se usa Supabase. Si no estan (ej. corriendo local sin
+# configurar nada), cae de vuelta a las listas en memoria de siempre -
+# asi nadie se queda sin poder levantar el proyecto en su maquina.
+#
+# IMPORTANTE: la SUPABASE_KEY tiene que ser la "service_role" (no la
+# "anon"), porque este backend necesita poder escribir (insert/update).
+# Nunca expongas esa key en el frontend - solo vive como variable de
+# entorno del servidor (Render).
+# ---------------------------------------------------------------------
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+
+supabase = None
+if SUPABASE_URL and SUPABASE_KEY:
+    from supabase import create_client
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Permite que el frontend (Vercel, o localhost mientras desarrollas)
 # llame a esta API desde el navegador. Sin esto, el navegador bloquea
@@ -63,6 +85,18 @@ EXPLICACIONES = {
         "24 o 72 horas), medida en milimetros. Lluvia muy concentrada "
         "en pocas horas es lo que mas rapido puede hacer subir un rio."
     ),
+    "tipo_inundacion_dominante": (
+        "FLUVIAL: se desborda un rio grande (Parana, Paraguay, Bermejo, "
+        "Pilcomayo) - dias de aviso, se sigue con el nivel del rio. "
+        "PLUVIAL: lluvia local que el desague no puede evacuar, sin que "
+        "ningun rio grande haya subido - es repentino y localizado, y NO "
+        "tiene estacion de rio que lo mida (por eso nivel_metros/umbrales "
+        "quedan en None en las localidades pluviales - el indicador real "
+        "es precipitacion_acumulada_mm). En Chaco, ademas, esta el Rio "
+        "Negro / riacho Barranqueras, un curso interno independiente del "
+        "Parana que historicamente causo las peores inundaciones de "
+        "Resistencia (1977, 1982, 1998) - ver /cuencas/rio_negro."
+    ),
 }
 
 # ---------------------------------------------------------------------
@@ -72,7 +106,7 @@ CUENCAS: dict = {
     "parana": {
         "nombre": "Rio Parana",
         "estacion": "Barranqueras",
-        "nivel_metros": 2.65,
+        "nivel_metros": 3.22,
         "umbral_alerta": 6.00,
         "umbral_evacuacion": 6.50,
         "fuente": "Prefectura Naval Argentina (via CIM-UNL)",
@@ -102,12 +136,40 @@ CUENCAS: dict = {
     "pilcomayo": {
         "nombre": "Rio Pilcomayo",
         "estacion": "Zona norte de Chaco / limite con Formosa",
-        "nivel_metros": 1.66,
+        "nivel_metros": 1.95,
         "umbral_alerta": 3.50,
         "umbral_evacuacion": 4.00,
         "fuente": "Reportes Prefectura / Comision Binacional (sin API publica estable)",
         "conectado": False,
         "ultima_verificacion": "2026-08-04",
+    },
+    # -------------------------------------------------------------
+    # CUENCA INTERNA — sumada 29/08/2026. Distinta del Parana: no
+    # depende del nivel del rio grande. Causo las inundaciones mas
+    # graves de la historia de Resistencia: en 1982 el dique que
+    # regulaba el valle del Rio Negro colapso, inundando el 70% de
+    # la superficie urbana y evacuando casi el 50% de la poblacion
+    # (Caputo et al. 1985, via CEPAL); en 1977 otro colapso del dique
+    # en la desembocadura dejo entrar agua del riacho Barranqueras a
+    # zonas densamente pobladas; en 1998 se llego a planificar la
+    # evacuacion total del area metropolitana.
+    #
+    # HONESTIDAD DE DATOS: no encontramos una estacion de medicion
+    # publica en tiempo real para el Rio Negro (no esta en la tabla
+    # del INA ni en niveles_rios.json). nivel_metros y umbrales
+    # quedan en None - pendiente de gestionar con la APA.
+    # -------------------------------------------------------------
+    "rio_negro": {
+        "nombre": "Rio Negro / Riacho Barranqueras (interno)",
+        "estacion": None,
+        "nivel_metros": None,
+        "umbral_alerta": None,
+        "umbral_evacuacion": None,
+        "fuente": "Sin estacion de medicion publica conocida en tiempo real. Historia documentada: colapsos de dique en 1977 y 1982 (Caputo et al. 1985, via CEPAL LC/ARTS 2018); evacuacion total planificada en 1998 (Rozé 1998, UNNE).",
+        "conectado": False,
+        "ultima_verificacion": None,
+        "tipo": "pluvial_fluvial_interno",
+        "internacional": False,
     },
 }
 
@@ -127,76 +189,150 @@ CUENCAS: dict = {
 # ---------------------------------------------------------------------
 localidades: dict = {
     "resistencia": {
-        "nombre": "Resistencia", "cuenca_clave": "parana", "nivel_metros": 2.65,
+        "nombre": "Resistencia", "cuenca_clave": "parana", "nivel_metros": 3.15,
         "umbral_alerta": 6.00, "umbral_evacuacion": 6.50, "precipitacion_acumulada_mm": 12.0,
         "fuente": "Prefectura Naval Argentina, estacion Barranqueras (mismo tramo, ~8km)",
         "conectado": False, "ultima_verificacion": "2026-08-04",
+        "tipo_inundacion_dominante": "fluvial",
+        "influencia_internacional": "Lluvias en el centro-este de Brasil (cuenca alta del Parana) y aporte del rio Paraguay. Tambien afectada por el rio interno Rio Negro / riacho Barranqueras - ver /organismos y /cuencas-internas.",
     },
     "barranqueras": {
-        "nombre": "Barranqueras", "cuenca_clave": "parana", "nivel_metros": 2.65,
+        "nombre": "Barranqueras", "cuenca_clave": "parana", "nivel_metros": 3.22,
         "umbral_alerta": 6.00, "umbral_evacuacion": 6.50, "precipitacion_acumulada_mm": 12.0,
         "fuente": "Prefectura Naval Argentina, estacion Barranqueras (medicion directa)",
         "conectado": False, "ultima_verificacion": "2026-08-04",
-    },
-    "corrientes": {
-        "nombre": "Corrientes (capital)", "cuenca_clave": "parana", "nivel_metros": 2.65,
-        "umbral_alerta": 6.50, "umbral_evacuacion": 7.00, "precipitacion_acumulada_mm": 11.0,
-        "fuente": "Prefectura Naval Argentina, estacion Corrientes (medicion directa)",
-        "conectado": False, "ultima_verificacion": "2026-08-04",
+        "tipo_inundacion_dominante": "fluvial",
+        "influencia_internacional": "Lluvias en el centro-este de Brasil (cuenca alta del Parana) y aporte del rio Paraguay. Tambien afectada por el riacho Barranqueras (cuenca del Rio Negro).",
     },
     "formosa": {
-        "nombre": "Formosa (capital)", "cuenca_clave": "paraguay", "nivel_metros": 2.52,
+        "nombre": "Formosa (capital)", "cuenca_clave": "paraguay", "nivel_metros": 4.05,
         "umbral_alerta": 7.80, "umbral_evacuacion": 8.30, "precipitacion_acumulada_mm": 8.0,
         "fuente": "Prefectura Naval Argentina, estacion Formosa (medicion directa)",
         "conectado": False, "ultima_verificacion": "2026-08-04",
+        "tipo_inundacion_dominante": "fluvial",
+        "influencia_internacional": "Lluvias en Bolivia y en el centro de Brasil, via la cuenca del rio Paraguay.",
     },
     "puerto_bermejo": {
-        "nombre": "Puerto Bermejo", "cuenca_clave": "paraguay", "nivel_metros": 2.52,
+        "nombre": "Puerto Bermejo", "cuenca_clave": "paraguay", "nivel_metros": 2.75,
         "umbral_alerta": 6.50, "umbral_evacuacion": 7.00, "precipitacion_acumulada_mm": 15.0,
         "fuente": "Prefectura Naval Argentina, estacion Bermejo (aproximado, zona de confluencia)",
         "conectado": False, "ultima_verificacion": "2026-08-04",
+        "tipo_inundacion_dominante": "fluvial",
+        "influencia_internacional": "Cuenca del rio Bermejo: nace en Bolivia y el noroeste argentino (Salta/Jujuy). Distinto origen que el Parana - ver caso Villa Rio Bermejito/Fortin Lavalle, abril 2026.",
     },
     "el_sauzalito": {
-        "nombre": "El Sauzalito", "cuenca_clave": "pilcomayo", "nivel_metros": 1.66,
+        "nombre": "El Sauzalito", "cuenca_clave": "pilcomayo", "nivel_metros": 1.90,
         "umbral_alerta": 3.50, "umbral_evacuacion": 4.00, "precipitacion_acumulada_mm": 5.0,
         "fuente": "Reportes Prefectura / Comision Binacional (sin API publica estable)",
         "conectado": False, "ultima_verificacion": "2026-08-04",
+        "tipo_inundacion_dominante": "fluvial",
+        "influencia_internacional": "Cuenca del rio Pilcomayo, compartida con Bolivia y Paraguay.",
     },
     "isla_del_cerrito": {
-        "nombre": "Isla del Cerrito", "cuenca_clave": "paraguay", "nivel_metros": 2.65,
+        "nombre": "Isla del Cerrito", "cuenca_clave": "paraguay", "nivel_metros": 3.35,
         "umbral_alerta": 6.20, "umbral_evacuacion": 6.80, "precipitacion_acumulada_mm": 12.0,
         "fuente": "Prefectura Naval Argentina, estacion Isla del Cerrito (medicion directa)",
         "conectado": False, "ultima_verificacion": "2026-08-04",
+        "tipo_inundacion_dominante": "fluvial",
+        "influencia_internacional": "Confluencia Parana-Paraguay: lluvias en Brasil, Paraguay y Bolivia.",
     },
     "puerto_vilelas": {
-        "nombre": "Puerto Vilelas", "cuenca_clave": "parana", "nivel_metros": 2.65,
+        "nombre": "Puerto Vilelas", "cuenca_clave": "parana", "nivel_metros": 3.20,
         "umbral_alerta": 6.00, "umbral_evacuacion": 6.50, "precipitacion_acumulada_mm": 12.0,
         "fuente": "Prefectura Naval Argentina, estacion Barranqueras (mismo tramo, ~5km)",
         "conectado": False, "ultima_verificacion": "2026-08-04",
+        "tipo_inundacion_dominante": "fluvial",
+        "influencia_internacional": "Lluvias en el centro-este de Brasil (cuenca alta del Parana) y aporte del rio Paraguay.",
     },
     "la_leonesa": {
         "nombre": "La Leonesa", "cuenca_clave": "paraguay", "nivel_metros": 3.90,
         "umbral_alerta": 6.50, "umbral_evacuacion": 7.00, "precipitacion_acumulada_mm": 10.0,
         "fuente": "Prefectura Naval Argentina, estacion Las Palmas (aproximado, ~5km)",
         "conectado": False, "ultima_verificacion": "2026-08-04",
+        "tipo_inundacion_dominante": "fluvial",
+        "influencia_internacional": "Cuenca del rio Paraguay: lluvias en Brasil, Paraguay y Bolivia.",
     },
     "pampa_del_indio": {
-        "nombre": "Pampa del Indio", "cuenca_clave": "bermejo", "nivel_metros": 2.52,
+        "nombre": "Pampa del Indio", "cuenca_clave": "bermejo", "nivel_metros": 2.90,
         "umbral_alerta": 4.50, "umbral_evacuacion": 5.00, "precipitacion_acumulada_mm": 15.0,
         "fuente": "Prefectura Naval Argentina (cobertura parcial)",
         "conectado": False, "ultima_verificacion": "2026-08-04",
+        "tipo_inundacion_dominante": "fluvial",
+        "influencia_internacional": "Cuenca del rio Bermejo: nace en Bolivia y el noroeste argentino (Salta/Jujuy).",
     },
     "villa_rio_bermejito": {
-        "nombre": "Villa Rio Bermejito", "cuenca_clave": "bermejo", "nivel_metros": 2.52,
+        "nombre": "Villa Rio Bermejito", "cuenca_clave": "bermejo", "nivel_metros": 2.70,
         "umbral_alerta": 4.50, "umbral_evacuacion": 5.00, "precipitacion_acumulada_mm": 15.0,
         "fuente": "Prefectura Naval Argentina (cobertura parcial)",
         "conectado": False, "ultima_verificacion": "2026-08-04",
+        "tipo_inundacion_dominante": "fluvial",
+        "influencia_internacional": "Cuenca del rio Bermejo: nace en Bolivia y Salta. Afectada en el temporal historico de abril 2026, cuando Defensa Civil confirmo que el rio traia caudales desde Salta por lluvias previas en esa provincia.",
     },
     "fuerte_esperanza": {
         "nombre": "Fuerte Esperanza", "cuenca_clave": "pilcomayo", "nivel_metros": 1.85,
         "umbral_alerta": 3.50, "umbral_evacuacion": 4.00, "precipitacion_acumulada_mm": 6.0,
         "fuente": "Reportes Prefectura / Comision Binacional (sin API publica estable)",
         "conectado": False, "ultima_verificacion": "2026-08-04",
+        "tipo_inundacion_dominante": "fluvial",
+        "influencia_internacional": "Cuenca del rio Pilcomayo, compartida con Bolivia y Paraguay.",
+    },
+    # -----------------------------------------------------------------
+    # LOCALIDADES DEL INTERIOR — riesgo PLUVIAL, sumadas 29/08/2026.
+    # A diferencia de las anteriores, estas NO estan sobre el Parana ni
+    # el Paraguay - no tienen estacion de rio, asi que nivel_metros y
+    # los umbrales quedan en None (nada que inventar). El riesgo real
+    # es lluvia local que supera la capacidad de desague, confirmado
+    # por fuente academica (Gomez et al., FACENA-UNNE, "Areas de riesgo
+    # de inundacion pluvial en la provincia del Chaco") y por eventos
+    # reales documentados en prensa durante 2026.
+    # -----------------------------------------------------------------
+    "san_martin_chaco": {
+        "nombre": "General José de San Martín", "cuenca_clave": None, "nivel_metros": None,
+        "umbral_alerta": None, "umbral_evacuacion": None, "precipitacion_acumulada_mm": 64.0,
+        "fuente": "Identificada como zona de riesgo pluvial en Gomez et al. (FACENA-UNNE, 2014). Ultimo evento real: temporal del 15/04/2026 con 64mm y caida de arboles/postes (Diario La Voz del Chaco).",
+        "conectado": False, "ultima_verificacion": "2026-04-15",
+        "tipo_inundacion_dominante": "pluvial",
+        "influencia_internacional": None,
+    },
+    "santa_sylvina": {
+        "nombre": "Santa Sylvina", "cuenca_clave": None, "nivel_metros": None,
+        "umbral_alerta": None, "umbral_evacuacion": None, "precipitacion_acumulada_mm": 80.0,
+        "fuente": "Evento real documentado: temporal del 07/06/2026, más de 80mm en pocas horas, inundacion de barrios y zona centrica con agua dentro de viviendas, tornado registrado (CharataChaco.Net).",
+        "conectado": False, "ultima_verificacion": "2026-06-07",
+        "tipo_inundacion_dominante": "pluvial",
+        "influencia_internacional": None,
+    },
+    "charata": {
+        "nombre": "Charata", "cuenca_clave": None, "nivel_metros": None,
+        "umbral_alerta": None, "umbral_evacuacion": None, "precipitacion_acumulada_mm": 105.0,
+        "fuente": "Identificada como zona de riesgo pluvial en Gomez et al. (FACENA-UNNE, 2014). Ultimo evento real: temporal del 15/04/2026 con 105mm y caida de un arbol (Diario La Voz del Chaco).",
+        "conectado": False, "ultima_verificacion": "2026-04-15",
+        "tipo_inundacion_dominante": "pluvial",
+        "influencia_internacional": None,
+    },
+    "quitilipi": {
+        "nombre": "Quitilipi", "cuenca_clave": None, "nivel_metros": None,
+        "umbral_alerta": None, "umbral_evacuacion": None, "precipitacion_acumulada_mm": 78.0,
+        "fuente": "Gobierno provincial anuncio plan integral para prevenir inundaciones en Quitilipi (chaco.gov.ar, mar. 2026). Ultimo evento real: temporal del 15/04/2026 con 78mm (Diario La Voz del Chaco).",
+        "conectado": False, "ultima_verificacion": "2026-04-15",
+        "tipo_inundacion_dominante": "pluvial",
+        "influencia_internacional": None,
+    },
+    "castelli": {
+        "nombre": "Juan José Castelli", "cuenca_clave": None, "nivel_metros": None,
+        "umbral_alerta": None, "umbral_evacuacion": None, "precipitacion_acumulada_mm": None,
+        "fuente": "Identificada como zona de riesgo pluvial en Gomez et al. (FACENA-UNNE, 2014). Ministerio de Salud de Chaco desplego equipos en 6 centros de evacuados de Castelli tras el temporal de Santa Sylvina, 07/06/2026 (CharataChaco.Net).",
+        "conectado": False, "ultima_verificacion": "2026-06-07",
+        "tipo_inundacion_dominante": "pluvial",
+        "influencia_internacional": None,
+    },
+    "presidencia_de_la_plaza": {
+        "nombre": "Presidencia de la Plaza", "cuenca_clave": None, "nivel_metros": None,
+        "umbral_alerta": None, "umbral_evacuacion": None, "precipitacion_acumulada_mm": None,
+        "fuente": "Identificada como zona de riesgo pluvial en Gomez et al. (FACENA-UNNE, 2014) bajo 'Pcia. de la Plaza'.",
+        "conectado": False, "ultima_verificacion": "2014",
+        "tipo_inundacion_dominante": "pluvial",
+        "influencia_internacional": None,
     },
 }
 
@@ -219,14 +355,14 @@ BARRIOS_VULNERABLES: dict = {
         "nombre": "Villa Río Negro", "localidad_padre": "resistencia",
         "lat": -27.4253, "lon": -58.9764, "precision": "confirmada",
         "motivo": "Inundado en la crecida de 1982 tras el colapso del dique del Río Negro",
-        "cota_inundacion_m": 4.80,
+        "cota_inundacion_m": 4.80, "familias_estimadas": 340,
         "via_acceso_critica": "Av. Sabin y Puente San Fernando (se corta por agua)",
     },
     "mujeres_argentinas": {
         "nombre": "Mujeres Argentinas", "localidad_padre": "resistencia",
         "lat": -27.4253, "lon": -58.9764, "precision": "aproximada (cerca de Villa Río Negro)",
         "motivo": "Ex Golf Club; inundado en la crecida de 1982",
-        "cota_inundacion_m": 5.10, 
+        "cota_inundacion_m": 5.10, "familias_estimadas": 520,
         "via_acceso_critica": "Av. Viuda de Ross / Av. San Martín",
     },
     "santa_lucia": {
@@ -240,21 +376,21 @@ BARRIOS_VULNERABLES: dict = {
         "nombre": "San Pedro Pescador (Barrio de los Pescadores)", "localidad_padre": "barranqueras",
         "lat": -27.46085, "lon": -58.86805, "precision": "confirmada",
         "motivo": "Único asentamiento del Chaco sobre el cauce principal del Paraná; 43 familias autoevacuadas en 2014",
-        "cota_inundacion_m": 5.60, 
+        "cota_inundacion_m": 5.60, "familias_estimadas": 190,
         "via_acceso_critica": "Rampa de bajada del Puente General Belgrano (se corta con 6.20m)",
     },
     "antequeras": {
         "nombre": "Puerto Antequeras", "localidad_padre": "barranqueras",
         "lat": -27.4425, "lon": -58.8503, "precision": "confirmada",
         "motivo": "Zona pesquera ribereña, afectada en múltiples crecidas históricas",
-        "cota_inundacion_m": 5.40, 
+        "cota_inundacion_m": 5.40, "familias_estimadas": 110,
         "via_acceso_critica": "Camino costero desde Barranqueras (intransitable con lluvia)",
     },
     "la_floresta": {
         "nombre": "La Floresta", "localidad_padre": "formosa",
         "lat": -26.1547, "lon": -58.1794, "precision": "confirmada",
         "motivo": "Junto al Riacho Formosa, que recibe agua de las crecidas del Pilcomayo y Bermejo",
-        "cota_inundacion_m": 7.20, 
+        "cota_inundacion_m": 7.20, "familias_estimadas": 410,
         "via_acceso_critica": "Av. Ribereña y accesos secundarios de tierra",
     },
     "tres_bocas": {
@@ -268,7 +404,7 @@ BARRIOS_VULNERABLES: dict = {
         "nombre": "Comunidades Wichí y Parajes (El Sauzal, Tartagal, Tres Pozos)", "localidad_padre": "el_sauzalito",
         "lat": -24.3800, "lon": -61.6200, "precision": "territorial dispersa, sin coordenadas exactas por paraje",
         "motivo": "Cortes recurrentes de caminos por crecientes del río Bermejo y desbordes de cañadas. Pérdida de conectividad celular y aislamiento alimentario.",
-        "cota_inundacion_m": 4.20, 
+        "cota_inundacion_m": 4.20, "familias_estimadas": 650,
         "via_acceso_critica": "Ruta Provincial 3 y picadas de tierra (intransitables)",
     },
 }
@@ -292,7 +428,9 @@ clima = {
 # ---------------------------------------------------------------------
 # CLASIFICACION DE ESTADO (verde/amarillo/rojo) — compartida
 # ---------------------------------------------------------------------
-def calcular_estado(nivel: float, umbral_alerta: float, umbral_evacuacion: float):
+def calcular_estado(nivel, umbral_alerta, umbral_evacuacion):
+    if nivel is None or umbral_alerta is None or umbral_evacuacion is None:
+        return "SIN_DATO", "⚪"
     if nivel >= umbral_evacuacion:
         return "EVACUACION", "🔴"
     if nivel >= umbral_alerta:
@@ -416,6 +554,81 @@ def obtener_historico(estacion: str, dias: int = 60):
 @app.get("/")
 def raiz():
     return {"servicio": "Portal Hidrico Chaco - API", "estado": "activo"}
+
+
+# ---------------------------------------------------------------------
+# ORGANISMOS RELEVANTES — investigado y verificado 29/08/2026.
+# ---------------------------------------------------------------------
+ORGANISMOS: dict = {
+    "smn": {
+        "nombre": "Servicio Meteorologico Nacional (SMN)",
+        "nivel": "nacional",
+        "dependencia": "Ministerio de Defensa",
+        "rol": "Pronostico del tiempo y sistema de alerta temprana meteorologica (3 niveles: amarillo/naranja/rojo).",
+        "url": "https://www.smn.gob.ar",
+        "url_alertas": "https://www.smn.gob.ar/alertas",
+    },
+    "ina": {
+        "nombre": "Instituto Nacional del Agua (INA)",
+        "nivel": "nacional",
+        "dependencia": "Secretaria de Infraestructura y Politica Hidrica, Ministerio de Obras Publicas",
+        "rol": "Pronosticos hidrologicos de los rios Parana, Paraguay, Iguazu y Uruguay via su Sistema de Informacion y Alerta Hidrologico (SIyAH). Reporta Barranqueras.",
+        "url": "https://www.ina.gob.ar/siyah/index.php",
+        "url_alertas": "https://alerta.ina.gob.ar/a5/diario/reporte_diario",
+    },
+    "apa": {
+        "nombre": "Administración Provincial del Agua (APA)",
+        "nivel": "provincial (Chaco)",
+        "dependencia": "Gobierno de la Provincia del Chaco",
+        "rol": "Unica autoridad del agua de la provincia. Mantiene 2.600 km de canales rurales y terraplenes de defensa contra inundaciones, y opera el Sistema de Defensas contra Inundaciones del Gran Resistencia. Tambien opera infraestructura de mitigacion PLUVIAL, como la Estacion de Bombeo Laguna Avalos (beneficia a mas de 200.000 habitantes de Gran Resistencia).",
+        "url": "http://apachaco.gob.ar/web/index.php",
+    },
+    "proteccion_civil_chaco": {
+        "nombre": "Subsecretaría de Protección Civil (ex Dirección Provincial de Defensa Civil)",
+        "nivel": "provincial (Chaco)",
+        "dependencia": "Ministerio de Gobierno y Trabajo",
+        "rol": "Coordinacion operativa de emergencias. En emergencias grandes arma un Comite de Contingencia junto a APA, Vialidad Provincial, SECHEEP, SAMEEP y demas areas, bajo monitoreo del gobernador. Provista de canobotes para zonas rurales aisladas (2026).",
+        "url": None,
+        "nota": "El nombre cambio en algun momento reciente - notas de 2026 usan 'Subsecretaria de Proteccion Civil'; una nota mas vieja la nombra 'Direccion Provincial de Defensa Civil'. Verificar el nombre vigente antes de citarlo formalmente.",
+    },
+    "afe": {
+        "nombre": "Agencia Federal de Emergencias (AFE)",
+        "nivel": "nacional",
+        "dependencia": "No confirmado con precision en las fuentes consultadas",
+        "rol": "Coordina el Plan Federal de Coordinacion ENOS 2026-2027 (aprobado por el Ministerio de Seguridad Nacional) entre Nacion, provincias y municipios, frente a inundaciones y crecidas asociadas a El Nino. Chaco se sumo a este plan (jul. 2026).",
+        "url": None,
+        "nota": "No confirmamos si reemplaza o coexiste con SINAGIR (que aparece en otras fuentes) - falta verificar la relacion entre ambos organismos.",
+    },
+}
+
+
+@app.get("/organismos")
+def listar_organismos():
+    return {"organismos": ORGANISMOS}
+
+
+# ---------------------------------------------------------------------
+# CONTEXTO DE RELIEVE — investigado 29/08/2026.
+# ---------------------------------------------------------------------
+CONTEXTO_RELIEVE = {
+    "resumen": (
+        "Provincia llana, parte de la gran llanura chaco-pampeana. Pendiente "
+        "suave de noroeste a sudeste: desde ~145 m s.n.m. en Taco Pozo (limite "
+        "oeste) hasta casi el nivel del rio en Barranqueras (este). Suelos "
+        "mayormente arcillosos, que junto con la escasa pendiente dificultan "
+        "el escurrimiento y forman numerosos banados, esteros y lagunas "
+        "semipermanentes. El sur de la provincia (Bajos Submeridionales) es la "
+        "zona de mayor riesgo de inundacion por su pendiente casi nula. El "
+        "noroeste (El Impenetrable) es llano con un leve abovedamiento sin "
+        "escurrimiento superficial hacia los rios."
+    ),
+    "fuente": "todo-argentina.net, viajarg.com, Wikipedia (Geografia de la Provincia del Chaco) - consultados 29/08/2026",
+}
+
+
+@app.get("/relieve")
+def relieve_provincial():
+    return CONTEXTO_RELIEVE
 
 
 @app.get("/localidades")
@@ -542,10 +755,10 @@ def actualizar_clima(datos: ActualizacionClima):
 # ---------------------------------------------------------------------
 # SOS Y REPORTES CIUDADANOS (Prioridad 1 del roadmap)
 #
-# NOTA IMPORTANTE: igual que el resto de los datos de este backend,
-# esto vive EN MEMORIA (listas de Python) - se pierde si Render
-# reinicia el servicio. Es el mismo pendiente de siempre (migrar a
-# Supabase), no algo nuevo que se agrega con esta funcionalidad.
+# Con SUPABASE_URL/SUPABASE_KEY configuradas, esto se guarda en
+# Postgres (persiste entre reinicios de Render). Sin esas variables,
+# sigue funcionando como antes: listas en memoria, se pierden al
+# reiniciar el servicio.
 # ---------------------------------------------------------------------
 tickets_sos: list = []
 reportes_ciudadanos: list = []
@@ -593,25 +806,46 @@ def crear_solicitud_sos(datos: SolicitudSOS):
         "unidad_asignada": None,
         "notas_despacho": None,
     }
-    tickets_sos.insert(0, ticket)
+    if supabase:
+        supabase.table("sos_tickets").insert(ticket).execute()
+    else:
+        tickets_sos.insert(0, ticket)
     return {"ok": True, "ticket": ticket}
 
 
 @app.get("/sos")
 def listar_solicitudes_sos():
+    if supabase:
+        resultado = (
+            supabase.table("sos_tickets")
+            .select("*")
+            .order("created_at", desc=True)
+            .execute()
+        )
+        return {"tickets": resultado.data}
     return {"tickets": tickets_sos}
 
 
 @app.patch("/sos/{ticket_id}")
 def actualizar_solicitud_sos(ticket_id: str, datos: ActualizacionSOS):
+    cambios = {"estado": datos.estado}
+    if datos.unidad_asignada is not None:
+        cambios["unidad_asignada"] = datos.unidad_asignada
+    if datos.notas_despacho is not None:
+        cambios["notas_despacho"] = datos.notas_despacho
+
+    if supabase:
+        resultado = (
+            supabase.table("sos_tickets").update(cambios).eq("id", ticket_id).execute()
+        )
+        if not resultado.data:
+            return {"error": f"Ticket '{ticket_id}' no encontrado"}
+        return {"ok": True, "ticket": resultado.data[0]}
+
     ticket = next((t for t in tickets_sos if t["id"] == ticket_id), None)
     if ticket is None:
         return {"error": f"Ticket '{ticket_id}' no encontrado"}
-    ticket["estado"] = datos.estado
-    if datos.unidad_asignada is not None:
-        ticket["unidad_asignada"] = datos.unidad_asignada
-    if datos.notas_despacho is not None:
-        ticket["notas_despacho"] = datos.notas_despacho
+    ticket.update(cambios)
     return {"ok": True, "ticket": ticket}
 
 
@@ -624,12 +858,23 @@ def crear_reporte_ciudadano(datos: ReporteCiudadano):
         "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         **datos.model_dump(),
     }
-    reportes_ciudadanos.insert(0, reporte)
+    if supabase:
+        supabase.table("reportes_ciudadanos").insert(reporte).execute()
+    else:
+        reportes_ciudadanos.insert(0, reporte)
     return {"ok": True, "reporte": reporte}
 
 
 @app.get("/reportes")
 def listar_reportes_ciudadanos():
+    if supabase:
+        resultado = (
+            supabase.table("reportes_ciudadanos")
+            .select("*")
+            .order("created_at", desc=True)
+            .execute()
+        )
+        return {"reportes": resultado.data}
     return {"reportes": reportes_ciudadanos}
 
 
