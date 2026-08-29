@@ -1,4 +1,8 @@
 """
+Backend del Portal Hidrico Chaco.
+
+Fuente unica de datos para el dashboard de Streamlit y el bot de
+Telegram, asi no quedan datos duplicados y desincronizados entre
 proyectos.
 
 IMPORTANTE SOBRE LOS DATOS:
