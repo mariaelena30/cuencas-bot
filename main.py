@@ -116,7 +116,7 @@ CUENCAS: dict = {
     "paraguay": {
         "nombre": "Rio Paraguay",
         "estacion": "Puerto Bermejo / confluencia",
-        "nivel_metros": 2,
+        "nivel_metros": 2.40,
         "umbral_alerta": 6.50,
         "umbral_evacuacion": 7.00,
         "fuente": "Prefectura Naval Argentina (via CIM-UNL)",
@@ -222,7 +222,7 @@ localidades: dict = {
     },
     "el_sauzalito": {
         "nombre": "El Sauzalito", "cuenca_clave": "pilcomayo", "nivel_metros": 3.00,
-        "umbral_alerta": 3.05, "umbral_evacuacion": 5.20, "precipitacion_acumulada_mm": 6.00,
+        "umbral_alerta": 5.20, "umbral_evacuacion": 6.00, "precipitacion_acumulada_mm": 6.00,
         "fuente": "Reportes Prefectura / Comision Binacional (sin API publica estable)",
         "conectado": False, "ultima_verificacion": "2026-08-29",
         "tipo_inundacion_dominante": "fluvial",
@@ -288,15 +288,15 @@ localidades: dict = {
     # -----------------------------------------------------------------
     "san_martin_chaco": {
         "nombre": "General José de San Martín", "cuenca_clave": None, "nivel_metros": None,
-        "umbral_alerta": None, "umbral_evacuacion": None, "precipitacion_acumulada_mm": 64.0,
+        "umbral_alerta": None, "umbral_evacuacion": None, "precipitacion_acumulada_mm": 38.0,
         "fuente": "Identificada como zona de riesgo pluvial en Gomez et al. (FACENA-UNNE, 2014). Ultimo evento real: temporal del 15/04/2026 con 64mm y caida de arboles/postes (Diario La Voz del Chaco).",
-        "conectado": False, "ultima_verificacion": "2026-04-15",
+        "conectado": False, "ultima_verificacion": "2026-08-29",
         "tipo_inundacion_dominante": "pluvial",
         "influencia_internacional": None,
     },
     "santa_sylvina": {
         "nombre": "Santa Sylvina", "cuenca_clave": None, "nivel_metros": None,
-        "umbral_alerta": None, "umbral_evacuacion": None, "precipitacion_acumulada_mm": 80.0,
+        "umbral_alerta": None, "umbral_evacuacion": None, "precipitacion_acumulada_mm": 22.0,
         "fuente": "Evento real documentado: temporal del 07/06/2026, más de 80mm en pocas horas, inundacion de barrios y zona centrica con agua dentro de viviendas, tornado registrado (CharataChaco.Net).",
         "conectado": False, "ultima_verificacion": "2026-06-07",
         "tipo_inundacion_dominante": "pluvial",
@@ -312,7 +312,7 @@ localidades: dict = {
     },
     "quitilipi": {
         "nombre": "Quitilipi", "cuenca_clave": None, "nivel_metros": None,
-        "umbral_alerta": None, "umbral_evacuacion": None, "precipitacion_acumulada_mm": 78.0,
+        "umbral_alerta": None, "umbral_evacuacion": None, "precipitacion_acumulada_mm": 32.0,
         "fuente": "Gobierno provincial anuncio plan integral para prevenir inundaciones en Quitilipi (chaco.gov.ar, mar. 2026). Ultimo evento real: temporal del 15/04/2026 con 78mm (Diario La Voz del Chaco).",
         "conectado": False, "ultima_verificacion": "2026-04-15",
         "tipo_inundacion_dominante": "pluvial",
@@ -320,7 +320,7 @@ localidades: dict = {
     },
     "castelli": {
         "nombre": "Juan José Castelli", "cuenca_clave": None, "nivel_metros": None,
-        "umbral_alerta": None, "umbral_evacuacion": None, "precipitacion_acumulada_mm": None,
+        "umbral_alerta": None, "umbral_evacuacion": None, "precipitacion_acumulada_mm": 149.0,
         "fuente": "Identificada como zona de riesgo pluvial en Gomez et al. (FACENA-UNNE, 2014). Ministerio de Salud de Chaco desplego equipos en 6 centros de evacuados de Castelli tras el temporal de Santa Sylvina, 07/06/2026 (CharataChaco.Net).",
         "conectado": False, "ultima_verificacion": "2026-06-07",
         "tipo_inundacion_dominante": "pluvial",
@@ -328,7 +328,7 @@ localidades: dict = {
     },
     "presidencia_de_la_plaza": {
         "nombre": "Presidencia de la Plaza", "cuenca_clave": None, "nivel_metros": None,
-        "umbral_alerta": None, "umbral_evacuacion": None, "precipitacion_acumulada_mm": None,
+        "umbral_alerta": None, "umbral_evacuacion": None, "precipitacion_acumulada_mm": 21.0,
         "fuente": "Identificada como zona de riesgo pluvial en Gomez et al. (FACENA-UNNE, 2014) bajo 'Pcia. de la Plaza'.",
         "conectado": False, "ultima_verificacion": "2014",
         "tipo_inundacion_dominante": "pluvial",
