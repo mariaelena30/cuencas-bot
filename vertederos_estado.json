@@ -4,18 +4,18 @@
       "nombre": "Itaipú",
       "estado": "SIN_NOTICIAS_RECIENTES",
       "detalle": "No se encontraron titulares recientes sobre apertura/cierre de vertedero.",
-      "ultima_verificacion": "2026-08-28T17:54:35.727743+00:00"
+      "ultima_verificacion": "2026-08-29T01:19:53.186656+00:00"
     },
     "yacyreta": {
       "nombre": "Yacyretá",
       "estado": "SIN_NOTICIAS_RECIENTES",
       "detalle": "No se encontraron titulares recientes sobre apertura/cierre de vertedero.",
-      "ultima_verificacion": "2026-08-28T17:54:35.993103+00:00"
+      "ultima_verificacion": "2026-08-29T01:19:53.432850+00:00"
     }
   },
   "alerta_temprana": {
     "hay_alerta": false,
     "avisos": []
   },
-  "actualizado": "2026-08-28T17:54:35.993137+00:00"
+  "actualizado": "2026-08-29T01:19:53.432877+00:00"
 }
