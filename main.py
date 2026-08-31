@@ -5,17 +5,20 @@ Fuente unica de datos para el dashboard de Streamlit y el bot de
 Telegram, asi no quedan datos duplicados y desincronizados entre
 proyectos.
 
-IMPORTANTE SOBRE LOS DATOS:
-Los valores de abajo son datos SEMILLA (de referencia/demostracion)
-para las localidades sin fuente publica en vivo. Las localidades con
-estacion hidrometrica de Prefectura Naval (via CIM-UNL) se actualizan
-automaticamente con el script actualizar_niveles.py. Cada localidad
-indica 'conectado: True/False' segun corresponda.
+DATOS ESTATICOS vs ESTADO REAL:
+- ESTATICO (vive en este archivo, en el dict `localidades`): nombre,
+  cuenca_clave, umbral_alerta, umbral_evacuacion, fuente. Casi no
+  cambia, no necesita base de datos.
+- ESTADO REAL (vive en Firestore, ver firestore_db.py): nivel_metros,
+  velocidad_m_h, anomalia_velocidad, conectado, ultima_verificacion.
+  Esto es lo que actualiza actualizar_niveles.py, y ahora SOBREVIVE
+  a un redeploy o a que Render se duerma por inactividad. Antes vivia
+  en un diccionario en RAM y se perdia en cada reinicio del proceso.
 
 UMBRALES: verificados contra la tabla oficial de Prefectura Naval
 Argentina (fich.unl.edu.ar/cim/rios/parana/alturas) el 09/08/2026.
 
-ALERTA POR VELOCIDAD DE SUBIDA (agregado):
+ALERTA POR VELOCIDAD DE SUBIDA:
 Ademas del umbral fijo de altura, el sistema calcula cuantos metros
 por hora sube el rio entre dos lecturas consecutivas. Una suba muy
 rapida es peligrosa aunque el nivel absoluto todavia no llegue al
@@ -27,13 +30,10 @@ from datetime import datetime, timezone
 from fastapi import FastAPI
 from pydantic import BaseModel
 
+import firestore_db
+
 app = FastAPI(title="Portal Hidrico Chaco - API")
 
-# ---------------------------------------------------------------------
-# UMBRAL DE VELOCIDAD DE SUBIDA (metros por hora)
-# Punto de partida razonable para el tramo del Parana en Chaco; ajustar
-# con Defensa Civil/INA cuando haya datos historicos reales acumulados.
-# ---------------------------------------------------------------------
 UMBRAL_VELOCIDAD_M_H = 0.5
 
 # ---------------------------------------------------------------------
@@ -67,152 +67,132 @@ EXPLICACIONES = {
 
 # ---------------------------------------------------------------------
 # CUENCAS — datos representativos de cada una de las 4 cuencas
+# (sin cambios respecto a la version anterior)
 # ---------------------------------------------------------------------
 CUENCAS: dict = {
     "parana": {
-        "nombre": "Rio Parana",
-        "estacion": "Barranqueras",
-        "nivel_metros": 3.22,
-        "umbral_alerta": 6.00,
-        "umbral_evacuacion": 6.50,
+        "nombre": "Rio Parana", "estacion": "Barranqueras",
+        "nivel_metros": 3.22, "umbral_alerta": 6.00, "umbral_evacuacion": 6.50,
         "fuente": "Prefectura Naval Argentina (via CIM-UNL)",
-        "conectado": False,
-        "ultima_verificacion": "2026-08-04",
+        "conectado": False, "ultima_verificacion": "2026-08-04",
     },
     "paraguay": {
-        "nombre": "Rio Paraguay",
-        "estacion": "Puerto Bermejo / confluencia",
-        "nivel_metros": 4.10,
-        "umbral_alerta": 6.50,
-        "umbral_evacuacion": 7.00,
+        "nombre": "Rio Paraguay", "estacion": "Puerto Bermejo / confluencia",
+        "nivel_metros": 4.10, "umbral_alerta": 6.50, "umbral_evacuacion": 7.00,
         "fuente": "Prefectura Naval Argentina (via CIM-UNL)",
-        "conectado": False,
-        "ultima_verificacion": "2026-08-04",
+        "conectado": False, "ultima_verificacion": "2026-08-04",
     },
     "bermejo": {
-        "nombre": "Rio Bermejo",
-        "estacion": "Presidencia de la Plaza (aprox.)",
-        "nivel_metros": 2.80,
-        "umbral_alerta": 4.50,
-        "umbral_evacuacion": 5.00,
+        "nombre": "Rio Bermejo", "estacion": "Presidencia de la Plaza (aprox.)",
+        "nivel_metros": 2.80, "umbral_alerta": 4.50, "umbral_evacuacion": 5.00,
         "fuente": "Prefectura Naval Argentina (cobertura parcial)",
-        "conectado": False,
-        "ultima_verificacion": "2026-08-04",
+        "conectado": False, "ultima_verificacion": "2026-08-04",
     },
     "pilcomayo": {
-        "nombre": "Rio Pilcomayo",
-        "estacion": "Zona norte de Chaco / limite con Formosa",
-        "nivel_metros": 1.95,
-        "umbral_alerta": 3.50,
-        "umbral_evacuacion": 4.00,
+        "nombre": "Rio Pilcomayo", "estacion": "Zona norte de Chaco / limite con Formosa",
+        "nivel_metros": 1.95, "umbral_alerta": 3.50, "umbral_evacuacion": 4.00,
         "fuente": "Reportes Prefectura / Comision Binacional (sin API publica estable)",
-        "conectado": False,
-        "ultima_verificacion": "2026-08-04",
+        "conectado": False, "ultima_verificacion": "2026-08-04",
     },
 }
 
 # ---------------------------------------------------------------------
-# LOCALIDADES — cada una con su cuenca_clave para poder agruparlas
-#
-# Umbrales corregidos (verificados 09/08/2026 contra fich.unl.edu.ar):
-# barranqueras 6.00 / 6.50 (ya coincidia)
-# corrientes 6.00 / 6.50 -> 6.50 / 7.00
-# formosa 5.50 / 6.00 -> 7.80 / 8.30
-# isla_del_cerrito 5.50 / 6.00 -> 6.20 / 6.80
-# puerto_bermejo 4.50 / 5.00 -> 6.50 / 7.00 (estacion "Bermejo")
-# la_leonesa 5.50 / 6.00 -> 6.50 / 7.00 (estacion "Las Palmas")
-# resistencia, puerto_vilelas: usan umbral de Barranqueras (mismo tramo)
-# el_sauzalito, pampa_del_indio, villa_rio_bermejito, fuerte_esperanza:
-# sin fuente publica de umbrales verificada, se mantienen como estaban
+# LOCALIDADES — SOLO metadatos estaticos + valores de arranque.
+# Los valores de arranque (nivel_metros, conectado, ultima_verificacion
+# de aca abajo) se usan UNICAMENTE la primerisima vez que se consulta
+# una localidad, antes de que exista algun estado guardado en Firestore.
+# En cuanto actualizar_niveles.py mande la primera lectura real, estos
+# numeros dejan de tener efecto: Firestore manda.
 # ---------------------------------------------------------------------
 localidades: dict = {
     "resistencia": {
-        "nombre": "Resistencia", "cuenca_clave": "parana", "nivel_metros": 3.15,
-        "umbral_alerta": 6.00, "umbral_evacuacion": 6.50, "precipitacion_acumulada_mm": 12.0,
+        "nombre": "Resistencia", "cuenca_clave": "parana",
+        "umbral_alerta": 6.00, "umbral_evacuacion": 6.50,
         "fuente": "Prefectura Naval Argentina, estacion Barranqueras (mismo tramo, ~8km)",
-        "conectado": False, "ultima_verificacion": "2026-08-04",
+        "nivel_metros": 3.15, "conectado": False, "ultima_verificacion": "2026-08-04",
+        "precipitacion_acumulada_mm": 12.0,
     },
     "barranqueras": {
-        "nombre": "Barranqueras", "cuenca_clave": "parana", "nivel_metros": 3.22,
-        "umbral_alerta": 6.00, "umbral_evacuacion": 6.50, "precipitacion_acumulada_mm": 12.0,
+        "nombre": "Barranqueras", "cuenca_clave": "parana",
+        "umbral_alerta": 6.00, "umbral_evacuacion": 6.50,
         "fuente": "Prefectura Naval Argentina, estacion Barranqueras (medicion directa)",
-        "conectado": False, "ultima_verificacion": "2026-08-04",
+        "nivel_metros": 3.22, "conectado": False, "ultima_verificacion": "2026-08-04",
+        "precipitacion_acumulada_mm": 12.0,
     },
     "corrientes": {
-        "nombre": "Corrientes (capital)", "cuenca_clave": "parana", "nivel_metros": 3.30,
-        "umbral_alerta": 6.50, "umbral_evacuacion": 7.00, "precipitacion_acumulada_mm": 11.0,
+        "nombre": "Corrientes (capital)", "cuenca_clave": "parana",
+        "umbral_alerta": 6.50, "umbral_evacuacion": 7.00,
         "fuente": "Prefectura Naval Argentina, estacion Corrientes (medicion directa)",
-        "conectado": False, "ultima_verificacion": "2026-08-04",
+        "nivel_metros": 3.30, "conectado": False, "ultima_verificacion": "2026-08-04",
+        "precipitacion_acumulada_mm": 11.0,
     },
     "formosa": {
-        "nombre": "Formosa (capital)", "cuenca_clave": "paraguay", "nivel_metros": 4.05,
-        "umbral_alerta": 7.80, "umbral_evacuacion": 8.30, "precipitacion_acumulada_mm": 8.0,
+        "nombre": "Formosa (capital)", "cuenca_clave": "paraguay",
+        "umbral_alerta": 7.80, "umbral_evacuacion": 8.30,
         "fuente": "Prefectura Naval Argentina, estacion Formosa (medicion directa)",
-        "conectado": False, "ultima_verificacion": "2026-08-04",
+        "nivel_metros": 4.05, "conectado": False, "ultima_verificacion": "2026-08-04",
+        "precipitacion_acumulada_mm": 8.0,
     },
     "puerto_bermejo": {
-        "nombre": "Puerto Bermejo", "cuenca_clave": "paraguay", "nivel_metros": 2.75,
-        "umbral_alerta": 6.50, "umbral_evacuacion": 7.00, "precipitacion_acumulada_mm": 15.0,
+        "nombre": "Puerto Bermejo", "cuenca_clave": "paraguay",
+        "umbral_alerta": 6.50, "umbral_evacuacion": 7.00,
         "fuente": "Prefectura Naval Argentina, estacion Bermejo (aproximado, zona de confluencia)",
-        "conectado": False, "ultima_verificacion": "2026-08-04",
+        "nivel_metros": 2.75, "conectado": False, "ultima_verificacion": "2026-08-04",
+        "precipitacion_acumulada_mm": 15.0,
     },
     "el_sauzalito": {
-        "nombre": "El Sauzalito", "cuenca_clave": "pilcomayo", "nivel_metros": 1.90,
-        "umbral_alerta": 3.50, "umbral_evacuacion": 4.00, "precipitacion_acumulada_mm": 5.0,
+        "nombre": "El Sauzalito", "cuenca_clave": "pilcomayo",
+        "umbral_alerta": 3.50, "umbral_evacuacion": 4.00,
         "fuente": "Reportes Prefectura / Comision Binacional (sin API publica estable)",
-        "conectado": False, "ultima_verificacion": "2026-08-04",
+        "nivel_metros": 1.90, "conectado": False, "ultima_verificacion": "2026-08-04",
+        "precipitacion_acumulada_mm": 5.0,
     },
     "isla_del_cerrito": {
-        "nombre": "Isla del Cerrito", "cuenca_clave": "paraguay", "nivel_metros": 3.35,
-        "umbral_alerta": 6.20, "umbral_evacuacion": 6.80, "precipitacion_acumulada_mm": 12.0,
+        "nombre": "Isla del Cerrito", "cuenca_clave": "paraguay",
+        "umbral_alerta": 6.20, "umbral_evacuacion": 6.80,
         "fuente": "Prefectura Naval Argentina, estacion Isla del Cerrito (medicion directa)",
-        "conectado": False, "ultima_verificacion": "2026-08-04",
+        "nivel_metros": 3.35, "conectado": False, "ultima_verificacion": "2026-08-04",
+        "precipitacion_acumulada_mm": 12.0,
     },
     "puerto_vilelas": {
-        "nombre": "Puerto Vilelas", "cuenca_clave": "parana", "nivel_metros": 3.20,
-        "umbral_alerta": 6.00, "umbral_evacuacion": 6.50, "precipitacion_acumulada_mm": 12.0,
+        "nombre": "Puerto Vilelas", "cuenca_clave": "parana",
+        "umbral_alerta": 6.00, "umbral_evacuacion": 6.50,
         "fuente": "Prefectura Naval Argentina, estacion Barranqueras (mismo tramo, ~5km)",
-        "conectado": False, "ultima_verificacion": "2026-08-04",
+        "nivel_metros": 3.20, "conectado": False, "ultima_verificacion": "2026-08-04",
+        "precipitacion_acumulada_mm": 12.0,
     },
     "la_leonesa": {
-        "nombre": "La Leonesa", "cuenca_clave": "paraguay", "nivel_metros": 3.90,
-        "umbral_alerta": 6.50, "umbral_evacuacion": 7.00, "precipitacion_acumulada_mm": 10.0,
+        "nombre": "La Leonesa", "cuenca_clave": "paraguay",
+        "umbral_alerta": 6.50, "umbral_evacuacion": 7.00,
         "fuente": "Prefectura Naval Argentina, estacion Las Palmas (aproximado, ~5km)",
-        "conectado": False, "ultima_verificacion": "2026-08-04",
+        "nivel_metros": 3.90, "conectado": False, "ultima_verificacion": "2026-08-04",
+        "precipitacion_acumulada_mm": 10.0,
     },
     "pampa_del_indio": {
-        "nombre": "Pampa del Indio", "cuenca_clave": "bermejo", "nivel_metros": 2.90,
-        "umbral_alerta": 4.50, "umbral_evacuacion": 5.00, "precipitacion_acumulada_mm": 15.0,
+        "nombre": "Pampa del Indio", "cuenca_clave": "bermejo",
+        "umbral_alerta": 4.50, "umbral_evacuacion": 5.00,
         "fuente": "Prefectura Naval Argentina (cobertura parcial)",
-        "conectado": False, "ultima_verificacion": "2026-08-04",
+        "nivel_metros": 2.90, "conectado": False, "ultima_verificacion": "2026-08-04",
+        "precipitacion_acumulada_mm": 15.0,
     },
     "villa_rio_bermejito": {
-        "nombre": "Villa Rio Bermejito", "cuenca_clave": "bermejo", "nivel_metros": 2.70,
-        "umbral_alerta": 4.50, "umbral_evacuacion": 5.00, "precipitacion_acumulada_mm": 15.0,
+        "nombre": "Villa Rio Bermejito", "cuenca_clave": "bermejo",
+        "umbral_alerta": 4.50, "umbral_evacuacion": 5.00,
         "fuente": "Prefectura Naval Argentina (cobertura parcial)",
-        "conectado": False, "ultima_verificacion": "2026-08-04",
+        "nivel_metros": 2.70, "conectado": False, "ultima_verificacion": "2026-08-04",
+        "precipitacion_acumulada_mm": 15.0,
     },
     "fuerte_esperanza": {
-        "nombre": "Fuerte Esperanza", "cuenca_clave": "pilcomayo", "nivel_metros": 1.85,
-        "umbral_alerta": 3.50, "umbral_evacuacion": 4.00, "precipitacion_acumulada_mm": 6.0,
+        "nombre": "Fuerte Esperanza", "cuenca_clave": "pilcomayo",
+        "umbral_alerta": 3.50, "umbral_evacuacion": 4.00,
         "fuente": "Reportes Prefectura / Comision Binacional (sin API publica estable)",
-        "conectado": False, "ultima_verificacion": "2026-08-04",
+        "nivel_metros": 1.85, "conectado": False, "ultima_verificacion": "2026-08-04",
+        "precipitacion_acumulada_mm": 6.0,
     },
 }
 
 # ---------------------------------------------------------------------
-# BARRIOS VULNERABLES — puntos especificos DENTRO de una localidad que
-# son historicamente mas golpeados por las crecidas que el resto de la
-# ciudad. No tienen nivel de rio propio: heredan el estado (Normal/
-# Alerta/Evacuacion) de su localidad_padre. Son para dar mas precision
-# visual en el mapa, marcados con datos de investigacion historica,
-# no con medicion en vivo propia.
-#
-# IMPORTANTE SOBRE PRECISION: villa_rio_negro, san_pedro_pescador,
-# antequeras y la_floresta tienen coordenadas confirmadas via fuentes
-# publicas (OpenStreetMap/Mapcarta/derutasydestinos). santa_lucia y
-# mujeres_argentinas usan coordenadas APROXIMADAS (no se encontro un
-# registro con coordenadas exactas), aclarado en su campo "precision".
+# BARRIOS VULNERABLES (sin cambios respecto a la version anterior)
 # ---------------------------------------------------------------------
 BARRIOS_VULNERABLES: dict = {
     "villa_rio_negro": {
@@ -253,30 +233,23 @@ BARRIOS_VULNERABLES: dict = {
 }
 
 satelital_ndvi = {
-    "ndvi_promedio": 0.48,
-    "condicion_vegetacion": "ESTABLE",
-    "conectado": False,
-    "ultima_verificacion": "2026-08-04",
+    "ndvi_promedio": 0.48, "condicion_vegetacion": "ESTABLE",
+    "conectado": False, "ultima_verificacion": "2026-08-04",
 }
 
 clima = {
-    "fase_oni": "Neutro",
-    "ultimo_valor_oni": 0.45,
-    "conectado": False,
-    "ultima_verificacion": "2026-08-04",
+    "fase_oni": "Neutro", "ultimo_valor_oni": 0.45,
+    "conectado": False, "ultima_verificacion": "2026-08-04",
 }
 
 # ---------------------------------------------------------------------
-# CLASIFICACION DE ESTADO (verde/amarillo/naranja/rojo) — compartida
+# CLASIFICACION DE ESTADO
 # ---------------------------------------------------------------------
 def calcular_estado(nivel: float, umbral_alerta: float, umbral_evacuacion: float,
                      anomalia_velocidad: bool = False):
     if nivel >= umbral_evacuacion:
         return "EVACUACION", "🔴"
     if anomalia_velocidad:
-        # Aunque el nivel absoluto todavia no llego al umbral de alerta,
-        # una suba muy rapida (glaciar, compuertas aguas arriba, tormenta
-        # muy localizada) es en si misma una señal de peligro.
         return "ALERTA_VELOCIDAD", "🟠"
     if nivel >= umbral_alerta:
         return "ALERTA", "🟡"
@@ -290,7 +263,13 @@ def _cuenca_con_estado(clave: str) -> dict:
 
 
 def _localidad_con_estado(clave: str) -> dict:
-    loc = localidades[clave]
+    """Combina los metadatos estaticos con el ultimo estado REAL guardado
+    en Firestore. Si Firestore todavia no tiene nada para esta localidad
+    (recien migrado, o nunca llego una lectura), usa el valor de arranque
+    del dict `localidades` como respaldo."""
+    base = localidades[clave]
+    estado_guardado = firestore_db.leer_estado(clave) or {}
+    loc = {**base, **estado_guardado}
     estado, emoji = calcular_estado(
         loc["nivel_metros"], loc["umbral_alerta"], loc["umbral_evacuacion"],
         anomalia_velocidad=loc.get("anomalia_velocidad", False),
@@ -299,7 +278,7 @@ def _localidad_con_estado(clave: str) -> dict:
 
 
 # ---------------------------------------------------------------------
-# MODELOS para los endpoints de actualizacion manual
+# MODELOS
 # ---------------------------------------------------------------------
 class ActualizacionHidrologia(BaseModel):
     localidad: str
@@ -327,7 +306,6 @@ def raiz():
 
 @app.get("/localidades")
 def listar_localidades():
-    """Devuelve todas las localidades con su estado calculado."""
     return {
         "localidades": {clave: _localidad_con_estado(clave) for clave in localidades},
         "explicaciones": EXPLICACIONES,
@@ -344,7 +322,6 @@ def obtener_localidad(clave: str):
 
 @app.get("/cuencas")
 def listar_cuencas():
-    """Devuelve las 4 cuencas con su estado calculado (para /cuencas del bot)."""
     return {
         "cuencas": {clave: _cuenca_con_estado(clave) for clave in CUENCAS},
         "explicaciones": EXPLICACIONES,
@@ -353,7 +330,6 @@ def listar_cuencas():
 
 @app.get("/cuencas/{clave}")
 def obtener_cuenca(clave: str):
-    """Devuelve una cuenca puntual junto con las localidades que le pertenecen."""
     clave = clave.lower()
     if clave not in CUENCAS:
         return {"error": f"Cuenca '{clave}' no encontrada"}
@@ -369,7 +345,6 @@ def obtener_cuenca(clave: str):
 
 @app.get("/bot/consultar")
 def consultar_para_bot():
-    """Endpoint de compatibilidad con el dashboard de Streamlit actual."""
     barr = _localidad_con_estado("barranqueras")
     return {
         "clima": clima,
@@ -388,7 +363,6 @@ def consultar_para_bot():
 
 @app.get("/barrios")
 def listar_barrios():
-    """Todos los barrios vulnerables, con el estado de su localidad padre."""
     resultado = {}
     for clave, b in BARRIOS_VULNERABLES.items():
         padre = _localidad_con_estado(b["localidad_padre"])
@@ -402,7 +376,6 @@ def listar_barrios():
 
 @app.get("/barrios/{localidad_clave}")
 def barrios_de_localidad(localidad_clave: str):
-    """Barrios vulnerables que pertenecen a una localidad puntual (para el bot)."""
     localidad_clave = localidad_clave.lower()
     if localidad_clave not in localidades:
         return {"error": f"Localidad '{localidad_clave}' no encontrada"}
@@ -418,41 +391,41 @@ def barrios_de_localidad(localidad_clave: str):
 @app.post("/hidrologia/actualizar")
 def actualizar_hidrologia(datos: ActualizacionHidrologia):
     """
-    Actualiza el nivel de una localidad y calcula la velocidad de subida
-    (metros por hora) comparando contra la lectura anterior, ANTES de
-    pisarla. Si la velocidad supera UMBRAL_VELOCIDAD_M_H, la localidad
-    queda marcada con anomalia_velocidad=True aunque el nivel absoluto
-    todavia no haya llegado al umbral_alerta.
+    Guarda el nuevo nivel EN FIRESTORE (no en RAM), calculando antes la
+    velocidad de subida contra el ultimo estado real guardado. Esto
+    sobrevive a un redeploy o a que Render se duerma por inactividad.
     """
     clave = datos.localidad.lower()
     if clave not in localidades:
         return {"error": f"Localidad '{datos.localidad}' no reconocida"}
 
-    loc = localidades[clave]
     ahora = datetime.now(timezone.utc)
+    estado_anterior = firestore_db.leer_estado(clave) or {}
 
-    nivel_anterior = loc.get("nivel_metros")
-    hora_anterior_iso = loc.get("_hora_lectura_anterior")
+    nivel_anterior = estado_anterior.get("nivel_metros", localidades[clave]["nivel_metros"])
+    hora_anterior_iso = estado_anterior.get("hora_lectura_anterior")
+
     velocidad_m_h = None
     anomalia_velocidad = False
-
-    if nivel_anterior is not None and hora_anterior_iso:
+    if hora_anterior_iso:
         hora_anterior = datetime.fromisoformat(hora_anterior_iso)
         horas_transcurridas = (ahora - hora_anterior).total_seconds() / 3600
-        if horas_transcurridas >= (1 / 60):  # al menos 1 minuto entre lecturas
+        if horas_transcurridas >= (1 / 60):
             velocidad_m_h = round((datos.nivel_metros - nivel_anterior) / horas_transcurridas, 3)
             anomalia_velocidad = velocidad_m_h >= UMBRAL_VELOCIDAD_M_H
 
-    loc["nivel_metros"] = datos.nivel_metros
-    loc["velocidad_m_h"] = velocidad_m_h
-    loc["anomalia_velocidad"] = anomalia_velocidad
-    loc["_hora_lectura_anterior"] = ahora.isoformat()
-
+    nuevo_estado = {
+        "nivel_metros": datos.nivel_metros,
+        "velocidad_m_h": velocidad_m_h,
+        "anomalia_velocidad": anomalia_velocidad,
+        "hora_lectura_anterior": ahora.isoformat(),
+        "conectado": True,
+        "ultima_verificacion": ahora.strftime("%Y-%m-%d %H:%M UTC"),
+    }
     if datos.precipitacion_acumulada_mm is not None:
-        loc["precipitacion_acumulada_mm"] = datos.precipitacion_acumulada_mm
+        nuevo_estado["precipitacion_acumulada_mm"] = datos.precipitacion_acumulada_mm
 
-    loc["conectado"] = True
-    loc["ultima_verificacion"] = ahora.strftime("%Y-%m-%d %H:%M UTC")
+    firestore_db.guardar_estado(clave, nuevo_estado)
 
     return {"ok": True, "localidad": _localidad_con_estado(clave)}
 
