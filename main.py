@@ -429,12 +429,39 @@ clima = {
 # CLASIFICACION DE ESTADO (verde/amarillo/rojo) — compartida
 # ---------------------------------------------------------------------
 def calcular_estado(nivel, umbral_alerta, umbral_evacuacion):
+    """
+    Sistema de 5 niveles de alerta (inspirado en el sistema de 5 niveles
+    de la Agencia Meteorologica de Japon - JMA), en vez del esquema
+    binario anterior (Normal/Alerta/Evacuacion).
+
+    Un esquema de mas niveles da mas tiempo de reaccion: en vez de pasar
+    de "todo normal" a "alerta" de golpe, hay dos escalones intermedios
+    que permiten a Defensa Civil empezar a prepararse antes de que el
+    rio cruce el umbral oficial.
+
+    Niveles (de menor a mayor riesgo):
+      NORMAL      - por debajo del 70% del umbral de alerta
+      MONITOREO   - entre 70% y 90% del umbral de alerta (vigilar)
+      ATENCION    - entre 90% y 100% del umbral de alerta (preparar)
+      ALERTA      - alcanzo el umbral de alerta oficial (Prefectura/APA)
+      EVACUACION  - alcanzo el umbral de evacuacion oficial
+
+    Los umbrales de ALERTA y EVACUACION son siempre los oficiales
+    (verificados contra fich.unl.edu.ar). Los cortes de MONITOREO/
+    ATENCION al 70%/90% son un margen de seguridad propio del proyecto,
+    no una norma oficial de Prefectura - se puede ajustar si Defensa
+    Civil Chaco define otro criterio.
+    """
     if nivel is None or umbral_alerta is None or umbral_evacuacion is None:
         return "SIN_DATO", "⚪"
     if nivel >= umbral_evacuacion:
         return "EVACUACION", "🔴"
     if nivel >= umbral_alerta:
-        return "ALERTA", "🟡"
+        return "ALERTA", "🟠"
+    if nivel >= umbral_alerta * 0.90:
+        return "ATENCION", "🟡"
+    if nivel >= umbral_alerta * 0.70:
+        return "MONITOREO", "🔵"
     return "NORMAL", "🟢"
 
 
