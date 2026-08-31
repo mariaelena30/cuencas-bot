@@ -20,7 +20,7 @@ import json
 import os
 from datetime import datetime, timedelta, timezone
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -496,6 +496,26 @@ class ActualizacionClima(BaseModel):
     ultimo_valor_oni: float
 
 
+class LecturaSensorIoT(BaseModel):
+    """
+    Lectura enviada por un sensor IoT propio (ESP32/ESP8266 + sensor
+    ultrasonico de nivel, ver docs/sensores-iot.md). Pensado para
+    localidades sin estacion de Prefectura, como El Sauzalito o Pampa
+    del Indio.
+    """
+    nivel_metros: float | None = None
+    precipitacion_mm: float | None = None
+    bateria_pct: float | None = None
+
+
+# Clave simple para autenticar sensores IoT propios. Se configura en
+# Render -> Settings -> Environment como API_KEY_SENSORES. Sin esto
+# configurado, el endpoint queda abierto (util solo para pruebas) - se
+# recomienda configurarla antes de desplegar sensores reales para que
+# no cualquiera pueda mandar lecturas falsas.
+API_KEY_SENSORES = os.environ.get("API_KEY_SENSORES")
+
+
 # ---------------------------------------------------------------------
 # ENDPOINTS
 # ---------------------------------------------------------------------
@@ -673,6 +693,132 @@ def obtener_localidad(clave: str):
     if clave not in localidades:
         return {"error": f"Localidad '{clave}' no encontrada"}
     return {"localidad": _localidad_con_estado(clave), "explicaciones": EXPLICACIONES}
+
+
+@app.post("/sensores/{clave}/lectura")
+def recibir_lectura_sensor(clave: str, datos: LecturaSensorIoT, x_api_key: str | None = Header(default=None)):
+    """
+    Recibe una lectura de un sensor IoT propio (ver docs/sensores-iot.md
+    para el hardware: ESP32 + sensor ultrasonico + panel solar, costo
+    aprox. USD 50-100 por unidad). Pensado para localidades que hoy
+    estan en null porque Prefectura no tiene estacion ahi (El Sauzalito,
+    Pampa del Indio, Fuerte Esperanza).
+
+    Requiere el header X-API-Key con el valor de la variable de entorno
+    API_KEY_SENSORES configurada en Render. Sin esa variable configurada
+    el endpoint queda sin autenticar (solo para pruebas).
+    """
+    if API_KEY_SENSORES and x_api_key != API_KEY_SENSORES:
+        return {"error": "API key invalida o faltante. Mandar el header X-API-Key."}
+
+    clave = clave.lower()
+    if clave not in localidades:
+        return {"error": f"Localidad '{clave}' no reconocida"}
+
+    ahora = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+    if datos.nivel_metros is not None:
+        localidades[clave]["nivel_metros"] = datos.nivel_metros
+        localidades[clave]["conectado"] = True
+        if "Sensor IoT propio" not in localidades[clave]["fuente"]:
+            localidades[clave]["fuente"] = f"Sensor IoT propio (UDC) - antes: {localidades[clave]['fuente']}"
+
+    if datos.precipitacion_mm is not None:
+        localidades[clave]["precipitacion_acumulada_mm"] = datos.precipitacion_mm
+
+    localidades[clave]["ultima_verificacion"] = ahora
+
+    return {
+        "ok": True,
+        "localidad": _localidad_con_estado(clave),
+        "bateria_pct": datos.bateria_pct,
+    }
+
+
+def calcular_riesgo_pluvial(clave: str) -> dict:
+    """
+    Puntaje de riesgo para localidades PLUVIALES (sin estacion de rio -
+    tipo_inundacion_dominante == 'pluvial'), como Charata o Santa
+    Sylvina.
+
+    OJO: esto NO es un modelo de IA ni fue entrenado con datos
+    historicos (a diferencia de Google Flood Hub / Groundsource). Es
+    una heuristica simple y transparente basada en dos senales
+    honestas: la lluvia acumulada ya cargada para esa localidad, y la
+    cantidad de reportes ciudadanos de anegamiento de las ultimas 24
+    horas. Se etiqueta como heuristica a proposito para no dar una
+    falsa sensacion de precision.
+    """
+    loc = localidades.get(clave)
+    if loc is None:
+        return {"riesgo": "SIN_DATO", "detalle": "localidad no encontrada"}
+
+    lluvia = loc.get("precipitacion_acumulada_mm")
+    if lluvia is None:
+        return {"riesgo": "SIN_DATO", "detalle": "sin dato de lluvia acumulada", "metodo": "heuristica_no_ia"}
+
+    if supabase:
+        try:
+            fuente_reportes = (
+                supabase.table("reportes_ciudadanos").select("*").eq("localidad", clave).execute().data
+            )
+        except Exception:
+            fuente_reportes = []
+    else:
+        fuente_reportes = reportes_ciudadanos
+
+    ahora = datetime.now(timezone.utc)
+    reportes_recientes = 0
+    for r in fuente_reportes:
+        if str(r.get("localidad", "")).lower() != clave:
+            continue
+        ts_raw = r.get("timestamp") or r.get("created_at") or ""
+        try:
+            ts_limpio = str(ts_raw).replace(" UTC", "").replace("Z", "").split(".")[0].replace("T", " ")
+            ts_dt = datetime.strptime(ts_limpio, "%Y-%m-%d %H:%M:%S") if len(ts_limpio) > 16 else datetime.strptime(ts_limpio, "%Y-%m-%d %H:%M")
+            ts_dt = ts_dt.replace(tzinfo=timezone.utc)
+            if (ahora - ts_dt).total_seconds() <= 24 * 3600:
+                reportes_recientes += 1
+        except Exception:
+            continue
+
+    puntaje = 0
+    if lluvia >= 80:
+        puntaje += 3
+    elif lluvia >= 40:
+        puntaje += 2
+    elif lluvia >= 15:
+        puntaje += 1
+    puntaje += min(reportes_recientes, 3)
+
+    if puntaje >= 5:
+        riesgo = "ALTO"
+    elif puntaje >= 3:
+        riesgo = "MEDIO"
+    elif puntaje >= 1:
+        riesgo = "BAJO"
+    else:
+        riesgo = "MINIMO"
+
+    return {
+        "riesgo": riesgo,
+        "puntaje": puntaje,
+        "lluvia_acumulada_mm": lluvia,
+        "reportes_ciudadanos_24h": reportes_recientes,
+        "metodo": "heuristica_transparente_no_ia",
+    }
+
+
+@app.get("/riesgo-pluvial/{clave}")
+def obtener_riesgo_pluvial(clave: str):
+    return calcular_riesgo_pluvial(clave.lower())
+
+
+@app.get("/riesgo-pluvial")
+def listar_riesgo_pluvial():
+    """Riesgo heuristico para todas las localidades pluviales (sin estacion de rio)."""
+    pluviales = [c for c, l in localidades.items() if l.get("tipo_inundacion_dominante") == "pluvial"]
+    return {clave: calcular_riesgo_pluvial(clave) for clave in pluviales}
 
 
 @app.get("/cuencas")
