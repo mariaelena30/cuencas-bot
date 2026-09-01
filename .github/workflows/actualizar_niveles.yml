@@ -1,25 +1,27 @@
-name: actualizar niveles de rio
+# Guardar como: .github/workflows/actualizar_niveles.yml
+# (dentro del repo cuencas-bot)
+#
+# Esto agrega un BOTON en GitHub para correr actualizar_niveles.py
+# sin necesidad de terminal ni Python instalado en tu computadora.
+name: Actualizar niveles de rios
 
 on:
+  workflow_dispatch: {}     # habilita el boton "Run workflow" en GitHub
   schedule:
-    # Corre todos los dias a las 09:00 y 21:00 UTC (06:00 y 18:00 hora Chaco)
-    - cron: "0 9,21 * * *"
-  workflow_dispatch: {}  # permite tambien correrlo a mano desde la pestaña "Actions" en GitHub
+    - cron: "*/15 * * * *"  # ademas, corre solo cada 15 minutos
 
 jobs:
   actualizar:
     runs-on: ubuntu-latest
     steps:
-      - name: Descargar el repositorio
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Configurar Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
       - name: Instalar dependencias
-        run: pip install requests beautifulsoup4 lxml
+        run: pip install -r requirements.txt
 
-      - name: Correr el actualizador de niveles
+      - name: Correr actualizar_niveles.py
         run: python actualizar_niveles.py
