@@ -7,3 +7,4 @@ paho-mqtt>=2.1.0
 python-dotenv
 firebase-admin
 beautifulsoup4
+lxml
