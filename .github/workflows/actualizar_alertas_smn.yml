@@ -1,0 +1,28 @@
+# Guardar como: .github/workflows/actualizar_alertas_smn.yml
+#
+# Corre el script cada 20 minutos para mantener las alertas del SMN
+# actualizadas SIN que el sitio tenga que consultar al SMN en cada visita.
+name: Actualizar alertas SMN (Chaco)
+
+on:
+  schedule:
+    - cron: "*/20 * * * *"
+  workflow_dispatch: {}   # permite ejecutarlo a mano desde GitHub
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install requests
+
+      - run: python actualizar_alertas_smn.py
+        env:
+          # Configurar este secret en Settings > Secrets del repo,
+          # con la URL publica del backend (ej: Vercel/Render/etc.)
+          PORTAL_BACKEND_URL: ${{ secrets.PORTAL_BACKEND_URL }}
