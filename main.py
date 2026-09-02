@@ -252,6 +252,12 @@ def calcular_estado(nivel, umbral_alerta, umbral_evacuacion, anomalia_velocidad:
         return "ALERTA", "🟡"
     return "NORMAL", "🟢"
 
+REPRESENTANTE_CUENCA = {
+    "parana": "barranqueras",
+    "paraguay": "puerto_bermejo",
+    "bermejo": "pampa_del_indio",
+    "pilcomayo": "el_sauzalito",
+}
 
 def _cuenca_con_estado(clave: str) -> dict:
     c = CUENCAS[clave]
