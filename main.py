@@ -27,9 +27,6 @@ app = FastAPI(title="Portal Hidrico Chaco - API")
 
 UMBRAL_VELOCIDAD_M_H = 0.5
 
-# ---------------------------------------------------------------------
-# EXPLICACIONES EN LENGUAJE SIMPLE
-# ---------------------------------------------------------------------
 EXPLICACIONES = {
     "nivel_metros": (
         "Es cuanto subio el agua del rio en ese punto, medido en metros. "
@@ -37,23 +34,14 @@ EXPLICACIONES = {
         "atencion; si supera el 'umbral de evacuacion', es momento de "
         "seguir las indicaciones de Defensa Civil."
     ),
-    "ndvi": (
-        "El NDVI mide que tan 'verde' y sana esta la vegetacion vista "
-        "desde satelite."
-    ),
+    "ndvi": "El NDVI mide que tan 'verde' y sana esta la vegetacion vista desde satelite.",
     "oni": (
         "El indice ONI mide si el oceano Pacifico esta mas caliente "
-        "(El Nino, mas lluvia) o mas frio (La Nina, menos lluvia) que "
-        "lo normal."
+        "(El Nino, mas lluvia) o mas frio (La Nina, menos lluvia) que lo normal."
     ),
-    "precipitacion_acumulada_mm": (
-        "Cantidad de lluvia caida en un periodo, en milimetros."
-    ),
+    "precipitacion_acumulada_mm": "Cantidad de lluvia caida en un periodo, en milimetros.",
 }
 
-# ---------------------------------------------------------------------
-# CUENCAS
-# ---------------------------------------------------------------------
 CUENCAS: dict = {
     "parana": {
         "nombre": "Rio Parana", "estacion": "Barranqueras",
@@ -81,9 +69,6 @@ CUENCAS: dict = {
     },
 }
 
-# ---------------------------------------------------------------------
-# LOCALIDADES - metadatos estaticos + valores de arranque
-# ---------------------------------------------------------------------
 localidades: dict = {
     "resistencia": {
         "nombre": "Resistencia", "cuenca_clave": "parana",
@@ -178,9 +163,6 @@ localidades: dict = {
     },
 }
 
-# ---------------------------------------------------------------------
-# BARRIOS VULNERABLES
-# ---------------------------------------------------------------------
 BARRIOS_VULNERABLES: dict = {
     "villa_rio_negro": {
         "nombre": "Villa Río Negro", "localidad_padre": "resistencia",
@@ -195,17 +177,17 @@ BARRIOS_VULNERABLES: dict = {
     "santa_lucia": {
         "nombre": "Santa Lucía", "localidad_padre": "resistencia",
         "lat": -27.4200, "lon": -58.9800, "precision": "aproximada",
-        "motivo": "Identificado como uno de los barrios históricamente más afectados de Resistencia",
+        "motivo": "Identificado como uno de los barrios historicamente mas afectados de Resistencia",
     },
     "san_pedro_pescador": {
         "nombre": "San Pedro Pescador (Barrio de los Pescadores)", "localidad_padre": "barranqueras",
         "lat": -27.46085, "lon": -58.86805, "precision": "confirmada",
-        "motivo": "Único asentamiento del Chaco sobre el cauce principal del Paraná; 43 familias autoevacuadas en 2014",
+        "motivo": "Unico asentamiento del Chaco sobre el cauce principal del Parana; 43 familias autoevacuadas en 2014",
     },
     "antequeras": {
         "nombre": "Puerto Antequeras", "localidad_padre": "barranqueras",
         "lat": -27.4425, "lon": -58.8503, "precision": "confirmada",
-        "motivo": "Zona pesquera ribereña, afectada en múltiples crecidas históricas",
+        "motivo": "Zona pesquera ribereña, afectada en multiples crecidas historicas",
     },
     "la_floresta": {
         "nombre": "La Floresta", "localidad_padre": "formosa",
@@ -229,18 +211,13 @@ clima = {
     "conectado": False, "ultima_verificacion": "2026-08-04",
 }
 
-# ---------------------------------------------------------------------
-# ALERTAS SMN (en memoria, se resincronizan solas cada corrida del script)
-# ---------------------------------------------------------------------
 ALERTAS_SMN: dict = {
     "alertas": [],
     "cantidad": 0,
     "ultima_verificacion": None,
 }
 
-# ---------------------------------------------------------------------
-# CLASIFICACION DE ESTADO
-# ---------------------------------------------------------------------
+
 def calcular_estado(nivel, umbral_alerta, umbral_evacuacion, anomalia_velocidad: bool = False):
     if nivel is None or umbral_alerta is None or umbral_evacuacion is None:
         return "SIN_DATO", "⚪"
@@ -252,17 +229,35 @@ def calcular_estado(nivel, umbral_alerta, umbral_evacuacion, anomalia_velocidad:
         return "ALERTA", "🟡"
     return "NORMAL", "🟢"
 
-  REPRESENTANTE_CUENCA = {
+
+REPRESENTANTE_CUENCA = {
     "parana": "barranqueras",
     "paraguay": "puerto_bermejo",
     "bermejo": "pampa_del_indio",
     "pilcomayo": "el_sauzalito",
 }
 
+
 def _cuenca_con_estado(clave: str) -> dict:
     c = CUENCAS[clave]
-    estado, emoji = calcular_estado(c["nivel_metros"], c["umbral_alerta"], c["umbral_evacuacion"])
-    return {**c, "clave": clave, "estado": estado, "emoji": emoji}
+    nivel = c["nivel_metros"]
+    conectado = c["conectado"]
+    ultima_verificacion = c["ultima_verificacion"]
+
+    representante = REPRESENTANTE_CUENCA.get(clave)
+    if representante:
+        loc_viva = _localidad_con_estado(representante)
+        if loc_viva.get("nivel_metros") is not None:
+            nivel = loc_viva["nivel_metros"]
+            conectado = loc_viva.get("conectado", False)
+            ultima_verificacion = loc_viva.get("ultima_verificacion")
+
+    estado, emoji = calcular_estado(nivel, c["umbral_alerta"], c["umbral_evacuacion"])
+    return {
+        **c, "clave": clave, "nivel_metros": nivel,
+        "conectado": conectado, "ultima_verificacion": ultima_verificacion,
+        "estado": estado, "emoji": emoji,
+    }
 
 
 def _localidad_con_estado(clave: str) -> dict:
@@ -276,9 +271,6 @@ def _localidad_con_estado(clave: str) -> dict:
     return {**loc, "clave": clave, "estado": estado, "emoji": emoji}
 
 
-# ---------------------------------------------------------------------
-# MODELOS
-# ---------------------------------------------------------------------
 class ActualizacionHidrologia(BaseModel):
     localidad: str
     nivel_metros: float
@@ -301,9 +293,6 @@ class ActualizacionAlertas(BaseModel):
     ultima_verificacion: str | None = None
 
 
-# ---------------------------------------------------------------------
-# ENDPOINTS
-# ---------------------------------------------------------------------
 @app.get("/")
 def raiz():
     return {"servicio": "Portal Hidrico Chaco - API", "estado": "activo"}
@@ -395,14 +384,11 @@ def barrios_de_localidad(localidad_clave: str):
 
 @app.get("/alertas")
 def listar_alertas():
-    """Alertas meteorologicas vigentes del SMN (Chaco en general + localidades
-    pluviales especificas sin rio cerca, como Santa Sylvina)."""
     return ALERTAS_SMN
 
 
 @app.post("/alertas/actualizar")
 def actualizar_alertas(datos: ActualizacionAlertas):
-    """Llamado por actualizar_alertas_smn.py cada vez que corre."""
     ALERTAS_SMN["alertas"] = datos.alertas
     ALERTAS_SMN["cantidad"] = datos.cantidad
     ALERTAS_SMN["ultima_verificacion"] = (
