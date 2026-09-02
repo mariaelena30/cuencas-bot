@@ -1,29 +1,20 @@
 """
 Backend del Portal Hidrico Chaco.
 
-Fuente unica de datos para el dashboard de Streamlit y el bot de
-Telegram, asi no quedan datos duplicados y desincronizados entre
-proyectos.
+Fuente unica de datos para el dashboard de Streamlit, el bot de Telegram,
+y el frontend real (cuenca_chaco en Vercel, via src/services/api.ts).
 
 DATOS ESTATICOS vs ESTADO REAL:
 - ESTATICO (vive en este archivo, en el dict `localidades`): nombre,
-  cuenca_clave, umbral_alerta, umbral_evacuacion, fuente. Casi no
-  cambia, no necesita base de datos.
+  cuenca_clave, umbral_alerta, umbral_evacuacion, fuente.
 - ESTADO REAL (vive en Firestore, ver firestore_db.py): nivel_metros,
   velocidad_m_h, anomalia_velocidad, conectado, ultima_verificacion.
-  Esto es lo que actualiza actualizar_niveles.py, y ahora SOBREVIVE
-  a un redeploy o a que Render se duerma por inactividad. Antes vivia
-  en un diccionario en RAM y se perdia en cada reinicio del proceso.
+  Sobrevive a un redeploy o a que Render se duerma por inactividad.
 
-UMBRALES: verificados contra la tabla oficial de Prefectura Naval
-Argentina (fich.unl.edu.ar/cim/rios/parana/alturas) el 09/08/2026.
-
-ALERTA POR VELOCIDAD DE SUBIDA:
-Ademas del umbral fijo de altura, el sistema calcula cuantos metros
-por hora sube el rio entre dos lecturas consecutivas. Una suba muy
-rapida es peligrosa aunque el nivel absoluto todavia no llegue al
-umbral de alerta (crecidas repentinas por apertura de compuertas
-aguas arriba, tormentas muy localizadas, etc.).
+ALERTAS SMN: se guardan en memoria (ALERTAS_SMN) porque son de corta
+vida (un aviso vigente hoy no importa mañana) y se resincronizan solas
+cada vez que corre actualizar_alertas_smn.py, asi que no hace falta
+Firestore para esto.
 """
 from datetime import datetime, timezone
 
@@ -48,26 +39,20 @@ EXPLICACIONES = {
     ),
     "ndvi": (
         "El NDVI mide que tan 'verde' y sana esta la vegetacion vista "
-        "desde satelite. Sirve como pista indirecta: cambios bruscos "
-        "pueden indicar sequia, inundacion o degradacion del suelo en "
-        "la zona."
+        "desde satelite."
     ),
     "oni": (
         "El indice ONI mide si el oceano Pacifico esta mas caliente "
-        "(El Nino, mas lluvia en la region) o mas frio (La Nina, menos "
-        "lluvia) que lo normal. Ayuda a anticipar si se viene una "
-        "temporada mas humeda o mas seca."
+        "(El Nino, mas lluvia) o mas frio (La Nina, menos lluvia) que "
+        "lo normal."
     ),
     "precipitacion_acumulada_mm": (
-        "Es la cantidad de lluvia caida, sumada en un periodo (ultimas "
-        "24 o 72 horas), medida en milimetros. Lluvia muy concentrada "
-        "en pocas horas es lo que mas rapido puede hacer subir un rio."
+        "Cantidad de lluvia caida en un periodo, en milimetros."
     ),
 }
 
 # ---------------------------------------------------------------------
-# CUENCAS — datos representativos de cada una de las 4 cuencas
-# (sin cambios respecto a la version anterior)
+# CUENCAS
 # ---------------------------------------------------------------------
 CUENCAS: dict = {
     "parana": {
@@ -97,12 +82,7 @@ CUENCAS: dict = {
 }
 
 # ---------------------------------------------------------------------
-# LOCALIDADES — SOLO metadatos estaticos + valores de arranque.
-# Los valores de arranque (nivel_metros, conectado, ultima_verificacion
-# de aca abajo) se usan UNICAMENTE la primerisima vez que se consulta
-# una localidad, antes de que exista algun estado guardado en Firestore.
-# En cuanto actualizar_niveles.py mande la primera lectura real, estos
-# numeros dejan de tener efecto: Firestore manda.
+# LOCALIDADES - metadatos estaticos + valores de arranque
 # ---------------------------------------------------------------------
 localidades: dict = {
     "resistencia": {
@@ -189,10 +169,17 @@ localidades: dict = {
         "nivel_metros": 1.85, "conectado": False, "ultima_verificacion": "2026-08-04",
         "precipitacion_acumulada_mm": 6.0,
     },
+    "santa_sylvina": {
+        "nombre": "Santa Sylvina", "cuenca_clave": None,
+        "umbral_alerta": None, "umbral_evacuacion": None,
+        "fuente": "Sin fuente hidrologica: sin rio cerca, depende de alertas SMN por lluvia",
+        "nivel_metros": None, "conectado": False, "ultima_verificacion": None,
+        "precipitacion_acumulada_mm": None,
+    },
 }
 
 # ---------------------------------------------------------------------
-# BARRIOS VULNERABLES (sin cambios respecto a la version anterior)
+# BARRIOS VULNERABLES
 # ---------------------------------------------------------------------
 BARRIOS_VULNERABLES: dict = {
     "villa_rio_negro": {
@@ -228,7 +215,7 @@ BARRIOS_VULNERABLES: dict = {
     "tres_bocas": {
         "nombre": "Paraje Las Tres Bocas", "localidad_padre": "puerto_vilelas",
         "lat": -27.5300, "lon": -58.8600, "precision": "aproximada",
-        "motivo": "Zona ribereña que queda aislada por tierra en crecidas grandes; en 2023, con Barranqueras en 6.54 m (evacuación), ~150 familias solo accedían en lancha desde Empedrado (Corrientes). Los parajes vecinos Soto y Cinco Bocas sufren el mismo aislamiento.",
+        "motivo": "Zona ribereña que queda aislada por tierra en crecidas grandes",
     },
 }
 
@@ -243,10 +230,20 @@ clima = {
 }
 
 # ---------------------------------------------------------------------
+# ALERTAS SMN (en memoria, se resincronizan solas cada corrida del script)
+# ---------------------------------------------------------------------
+ALERTAS_SMN: dict = {
+    "alertas": [],
+    "cantidad": 0,
+    "ultima_verificacion": None,
+}
+
+# ---------------------------------------------------------------------
 # CLASIFICACION DE ESTADO
 # ---------------------------------------------------------------------
-def calcular_estado(nivel: float, umbral_alerta: float, umbral_evacuacion: float,
-                     anomalia_velocidad: bool = False):
+def calcular_estado(nivel, umbral_alerta, umbral_evacuacion, anomalia_velocidad: bool = False):
+    if nivel is None or umbral_alerta is None or umbral_evacuacion is None:
+        return "SIN_DATO", "⚪"
     if nivel >= umbral_evacuacion:
         return "EVACUACION", "🔴"
     if anomalia_velocidad:
@@ -263,10 +260,6 @@ def _cuenca_con_estado(clave: str) -> dict:
 
 
 def _localidad_con_estado(clave: str) -> dict:
-    """Combina los metadatos estaticos con el ultimo estado REAL guardado
-    en Firestore. Si Firestore todavia no tiene nada para esta localidad
-    (recien migrado, o nunca llego una lectura), usa el valor de arranque
-    del dict `localidades` como respaldo."""
     base = localidades[clave]
     estado_guardado = firestore_db.leer_estado(clave) or {}
     loc = {**base, **estado_guardado}
@@ -294,6 +287,12 @@ class ActualizacionSatelital(BaseModel):
 class ActualizacionClima(BaseModel):
     fase_oni: str
     ultimo_valor_oni: float
+
+
+class ActualizacionAlertas(BaseModel):
+    alertas: list[dict]
+    cantidad: int
+    ultima_verificacion: str | None = None
 
 
 # ---------------------------------------------------------------------
@@ -388,13 +387,27 @@ def barrios_de_localidad(localidad_clave: str):
     return {"barrios": resultado}
 
 
+@app.get("/alertas")
+def listar_alertas():
+    """Alertas meteorologicas vigentes del SMN (Chaco en general + localidades
+    pluviales especificas sin rio cerca, como Santa Sylvina)."""
+    return ALERTAS_SMN
+
+
+@app.post("/alertas/actualizar")
+def actualizar_alertas(datos: ActualizacionAlertas):
+    """Llamado por actualizar_alertas_smn.py cada vez que corre."""
+    ALERTAS_SMN["alertas"] = datos.alertas
+    ALERTAS_SMN["cantidad"] = datos.cantidad
+    ALERTAS_SMN["ultima_verificacion"] = (
+        datos.ultima_verificacion
+        or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    )
+    return {"ok": True, "alertas_smn": ALERTAS_SMN}
+
+
 @app.post("/hidrologia/actualizar")
 def actualizar_hidrologia(datos: ActualizacionHidrologia):
-    """
-    Guarda el nuevo nivel EN FIRESTORE (no en RAM), calculando antes la
-    velocidad de subida contra el ultimo estado real guardado. Esto
-    sobrevive a un redeploy o a que Render se duerma por inactividad.
-    """
     clave = datos.localidad.lower()
     if clave not in localidades:
         return {"error": f"Localidad '{datos.localidad}' no reconocida"}
@@ -407,7 +420,7 @@ def actualizar_hidrologia(datos: ActualizacionHidrologia):
 
     velocidad_m_h = None
     anomalia_velocidad = False
-    if hora_anterior_iso:
+    if hora_anterior_iso and nivel_anterior is not None:
         hora_anterior = datetime.fromisoformat(hora_anterior_iso)
         horas_transcurridas = (ahora - hora_anterior).total_seconds() / 3600
         if horas_transcurridas >= (1 / 60):
