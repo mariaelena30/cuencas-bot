@@ -8,3 +8,5 @@ python-dotenv
 firebase-admin
 beautifulsoup4
 lxml
+httpx
+supabase
