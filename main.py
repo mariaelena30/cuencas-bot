@@ -366,6 +366,24 @@ localidades: dict = {
 # registro con coordenadas exactas), aclarado en su campo "precision".
 # ---------------------------------------------------------------------
 BARRIOS_VULNERABLES: dict = {
+    "bendiciones": {
+        "nombre": "Barrio Bendiciones", "localidad_padre": "santa_sylvina",
+        "lat": -27.7830, "lon": -61.1500, "precision": "aproximada (coordenadas del centro urbano de Santa Sylvina, no hay coordenadas exactas del barrio)",
+        "motivo": "Temporal del 07/06/2026: voladura de techo de una vivienda (12 chapas de ~3.5m), confirmado por 4 fuentes (ChacoDiaPorDia, Diario Plaza 109, Alerta Urbana, CharataChaco.Net). Nota: las fuentes difieren sobre si hubo anegamiento de calles - la mayoria dice que no, una (CharataChaco.Net) menciona inundacion en barrios y zona centrica. Danno principal confirmado es por viento/tornado, no por agua.",
+        "via_acceso_critica": "Caminos rurales del interior quedaron intransitables tras el temporal (no es un corte de acceso al barrio en si, es a nivel de toda la zona rural de Santa Sylvina)",
+    },
+    "victoria_quitilipi": {
+        "nombre": "Barrio Victoria", "localidad_padre": "quitilipi",
+        "lat": -26.8700, "lon": -60.2200, "precision": "aproximada (coordenadas del centro urbano de Quitilipi, no hay coordenadas exactas del barrio)",
+        "motivo": "Testimonio de vecino (Higinio Encina, comunidad Qom) tuvo que evacuar su casa y refugiarse en la Escuela N°59 - LA NACION. OJO: la fuente de este nombre puntual es de un evento historico (no de 2026), pero Quitilipi tiene inundaciones recurrentes documentadas en el mismo tipo de terreno segun vecinos y prensa 2026 (chacoahora.com, sin nombre de barrio en esa nota) - se marca el nombre como referencia historica a confirmar si se repite en eventos recientes.",
+        "via_acceso_critica": "Agua estancada sin escurrimiento (terreno llano, sin desagues) - mismo problema estructural que denuncian los vecinos en las notas de 2026.",
+    },
+    "macarena_quitilipi": {
+        "nombre": "Barrio Macarena", "localidad_padre": "quitilipi",
+        "lat": -26.8700, "lon": -60.2200, "precision": "aproximada (coordenadas del centro urbano de Quitilipi, no hay coordenadas exactas del barrio)",
+        "motivo": "Testimonio de vecino (Ruben Alvarenga) - LA NACION. Misma nota de advertencia que Barrio Victoria: fuente de un evento historico, a confirmar vigencia en 2026.",
+        "via_acceso_critica": "Agua estancada sin escurrimiento (terreno llano, sin desagues).",
+    },
     "villa_rio_negro": {
         "nombre": "Villa Río Negro", "localidad_padre": "resistencia",
         "lat": -27.4253, "lon": -58.9764, "precision": "confirmada",
