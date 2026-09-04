@@ -2,20 +2,20 @@
   "vertederos": {
     "itaipu": {
       "nombre": "Itaipú",
-      "estado": "SIN_NOTICIAS_RECIENTES",
-      "detalle": "No se encontraron titulares recientes sobre apertura/cierre de vertedero.",
-      "ultima_verificacion": "2026-09-04T02:06:00.969345+00:00"
+      "estado": "DESCONOCIDO",
+      "error": "No se pudo consultar noticias: HTTP Error 503: Service Unavailable",
+      "ultima_verificacion": "2026-09-04T10:11:46.233025+00:00"
     },
     "yacyreta": {
       "nombre": "Yacyretá",
-      "estado": "SIN_NOTICIAS_RECIENTES",
-      "detalle": "No se encontraron titulares recientes sobre apertura/cierre de vertedero.",
-      "ultima_verificacion": "2026-09-04T02:06:01.303423+00:00"
+      "estado": "DESCONOCIDO",
+      "error": "No se pudo consultar noticias: HTTP Error 503: Service Unavailable",
+      "ultima_verificacion": "2026-09-04T10:11:53.965237+00:00"
     }
   },
   "alerta_temprana": {
     "hay_alerta": false,
     "avisos": []
   },
-  "actualizado": "2026-09-04T02:06:01.303454+00:00"
+  "actualizado": "2026-09-04T10:11:53.965472+00:00"
 }
