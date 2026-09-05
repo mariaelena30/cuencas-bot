@@ -6,17 +6,25 @@ Lee la tabla publica de alturas hidrometricas de la cuenca del Parana
 el backend del Portal Hidrico Chaco via su endpoint POST.
 
 IMPORTANTE SOBRE PRECISION (leer antes de tocar el mapeo):
-- 4 localidades tienen estacion propia y exacta en esta fuente:
-  Barranqueras, Corrientes, Formosa, Isla del Cerrito.
+- 2 localidades tienen estacion propia y exacta en esta fuente:
+  Barranqueras, Isla del Cerrito.
 - 4 localidades usan la estacion mas cercana del MISMO tramo de rio,
   porque no tienen hidrometro propio publicado aca (Resistencia y
   Puerto Vilelas -> estacion Barranqueras; Puerto Bermejo -> estacion
   "Bermejo"; La Leonesa -> estacion "Las Palmas"). Son aproximaciones
   razonables por cercania geografica, NO el punto exacto.
 - 4 localidades NO tienen dato real disponible en esta fuente porque
-  estan en las cuencas del Bermejo/Pilcomayo, que esta red no cubre:
+  estan en las cuencas del Bermejo, que esta red no cubre:
   El Sauzalito, Pampa del Indio, Villa Rio Bermejito, Fuerte Esperanza.
   Estas quedan con "conectado": False hasta conseguir otra fuente.
+
+NOTA (02/09/2026): se sacaron las estaciones "Corrientes" y "Formosa"
+de MAPEO_ESTACIONES - esas localidades ya NO forman parte del alcance
+de este proyecto (Portal Hidrico Chaco cubre solo la provincia del
+Chaco; Corrientes capital y Formosa capital son de OTRAS provincias).
+Si la fuente sigue publicando esas filas, ahora se ignoran (no estan
+en el diccionario, asi que el filtro `if nombre_estacion not in
+MAPEO_ESTACIONES: continue` las descarta solo).
 
 Fuente: Prefectura Naval Argentina, via CIM-UNL
         https://fich.unl.edu.ar/cim/rios/parana/alturas
@@ -43,12 +51,6 @@ MAPEO_ESTACIONES = {
         {"localidad": "barranqueras", "exacto": True},
         {"localidad": "resistencia", "exacto": False},
         {"localidad": "puerto_vilelas", "exacto": False},
-    ],
-    "Corrientes": [
-        {"localidad": "corrientes", "exacto": True},
-    ],
-    "Formosa": [
-        {"localidad": "formosa", "exacto": True},
     ],
     "Isla del Cerrito": [
         {"localidad": "isla_del_cerrito", "exacto": True},
