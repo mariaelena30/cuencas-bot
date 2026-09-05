@@ -384,6 +384,30 @@ BARRIOS_VULNERABLES: dict = {
         "motivo": "Testimonio de vecino (Ruben Alvarenga) - LA NACION. Misma nota de advertencia que Barrio Victoria: fuente de un evento historico, a confirmar vigencia en 2026.",
         "via_acceso_critica": "Agua estancada sin escurrimiento (terreno llano, sin desagues).",
     },
+    "veintidos_agosto_pampa_indio": {
+        "nombre": "Barrio 22 de Agosto", "localidad_padre": "pampa_del_indio",
+        "lat": -26.0480, "lon": -59.9416, "precision": "aproximada (coordenadas del centro urbano de Pampa del Indio, no hay coordenadas exactas del barrio)",
+        "motivo": "Comunicado oficial del Gobierno del Chaco (chaco.gov.ar, 24/04/2026): mas de 500 familias asistidas tras lluvias que superaron los 240mm. Confirmado tambien por ChacoDiaPorDia.",
+        "via_acceso_critica": "Zona con asistencia via programa Nachec (Min. de Desarrollo Humano) durante la emergencia de abril 2026.",
+    },
+    "ex_cancha_aviacion_pampa_indio": {
+        "nombre": "Barrio Ex Cancha de Aviación", "localidad_padre": "pampa_del_indio",
+        "lat": -26.0480, "lon": -59.9416, "precision": "aproximada (coordenadas del centro urbano de Pampa del Indio, no hay coordenadas exactas del barrio)",
+        "motivo": "Comunicado oficial del Gobierno del Chaco (chaco.gov.ar, 24/04/2026), mismo evento que Barrio 22 de Agosto - lluvias >240mm, abril 2026.",
+        "via_acceso_critica": "Zona con asistencia via programa Nachec durante la emergencia de abril 2026.",
+    },
+    "pueblo_viejo_pampa_indio": {
+        "nombre": "Barrio Pueblo Viejo (Pampa del Indio)", "localidad_padre": "pampa_del_indio",
+        "lat": -26.0480, "lon": -59.9416, "precision": "aproximada (coordenadas del centro urbano de Pampa del Indio, no hay coordenadas exactas del barrio)",
+        "motivo": "Comunicado oficial del Gobierno del Chaco (chaco.gov.ar, 24/04/2026), mismo evento que Barrio 22 de Agosto - lluvias >240mm, abril 2026. Tambien se asistieron parajes rurales cercanos (Lote 10, Lote 15, Lote 47, Pampa Chica, Pampa Grande, Cuarta Legua 14 y 17, Campo Medina).",
+        "via_acceso_critica": "Zona con asistencia via programa Nachec durante la emergencia de abril 2026.",
+    },
+    "pueblo_viejo_puerto_bermejo": {
+        "nombre": "Pueblo Viejo (Puerto Bermejo)", "localidad_padre": "puerto_bermejo",
+        "lat": -26.9064, "lon": -58.5417, "precision": "aproximada (coordenadas del centro urbano de Puerto Bermejo, no hay coordenadas exactas del sector)",
+        "motivo": "Sector historico del pueblo, distinto del 'pueblo nuevo'. Fuente de 2016 (LosAndes.com.ar): cedieron las defensas ante la crecida del rio Paraguay, 100 familias evacuadas, el intendente de ese momento (Isaac Velozo) pidio reforzar las defensas para que el agua no avance sobre el pueblo nuevo. Confirmado como zona critica de nuevo en el evento de abril 2026 (situaciones mas criticas de la provincia, junto a Pampa del Indio y Villa Rio Bermejito), aunque esa nota no especifica si fue en el sector viejo o nuevo.",
+        "via_acceso_critica": "Defensas costeras del pueblo viejo, historicamente las primeras en ceder ante una crecida del Paraguay.",
+    },
     "villa_rio_negro": {
         "nombre": "Villa Río Negro", "localidad_padre": "resistencia",
         "lat": -27.4253, "lon": -58.9764, "precision": "confirmada",
