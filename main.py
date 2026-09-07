@@ -193,6 +193,23 @@ CUENCAS: dict = {
         "ultima_verificacion": None,
         "tipo": "pluvial_fluvial_interno",
         "internacional": False,
+        "sistema_defensas": {
+            "fuente": "Roces, C. - 'La ciudad de Resistencia y las inundaciones' (UNNE, repositorio.unne.edu.ar/handle/123456789/30774); Diario Norte (28/07/2025, 'Hace 43 años colapsaba el dique regulador del Rio Negro').",
+            "cota_terraplenes_m": "52.00 metros sobre el nivel del mar (cota MOP), protege Barranqueras + Puerto Vilelas + gran parte de Resistencia.",
+            "caudal_diseno_m3_s": 76000,
+            "nivel_critico_barranqueras_m": 9.50,
+            "nota_nivel_critico": "9.50 m en Barranqueras es el nivel maximo que el sistema de defensas actual (terraplenes + diques) puede soportar segun el estudio citado - por encima de eso, riesgo de desborde de toda el area metropolitana.",
+            "senal_temprana_no_confirmada": "El mismo estudio menciona que en 1983 se uso como referencia que el Parana en Iguazu (Misiones) superando los 39m anticipaba que Barranqueras llegaria a 9.5m. PENDIENTE DE CONFIRMAR: no verificamos si esa correlacion sigue siendo valida con el sistema de medicion actual de Prefectura (hoy Iguazu tiene umbral de alerta de 25m / evacuacion 28m segun fich.unl.edu.ar, escala distinta a los '39m' de 1983 - posible cambio de cero de referencia). NO USAR este numero para alertas hasta confirmar con Prefectura/INA.",
+            "estructura": "2 diques que regulan el nivel del Rio Negro + terraplenes perimetrales + sistema de bombas para las lagunas internas (agua de lluvia).",
+            "historial_barranqueras_m": {
+                "1905": 8.32,
+                "1966": "peor inundacion antes de existir las defensas actuales",
+                "1982_83": 8.60,
+                "1985_86": "muy perjudicial, sin metro exacto confirmado",
+                "1992": "muy perjudicial, sin metro exacto confirmado",
+                "1998": "evacuacion planificada preventivamente, no llego a desbordar",
+            },
+        },
     },
 }
 
@@ -258,6 +275,7 @@ localidades: dict = {
         "conectado": False, "ultima_verificacion": "2026-08-29",
         "tipo_inundacion_dominante": "fluvial",
         "influencia_internacional": "Lluvias en el centro-este de Brasil (cuenca alta del Parana) y aporte del rio Paraguay.",
+        "nota_infraestructura": "El canal regulador que desagota en Puerto Vilelas tiene un caudal de 10 m3/s, pero las bombas instaladas para desagotarlo tienen una capacidad MENOR a ese caudal - desajuste de diseno documentado (Roces, C., UNNE). Terraplen provisorio construido tras 1998, previsto para un adicional de 2.50m de creciente sobre el muelle (hasta cota 52m) - requiere mantenimiento permanente segun la misma fuente.",
     },
     "la_leonesa": {
         "nombre": "La Leonesa", "cuenca_clave": "paraguay", "nivel_metros": 2.60,
@@ -490,6 +508,47 @@ ALERTAS_SMN: dict = {
     "alertas": [],
     "cantidad": 0,
     "ultima_verificacion": None,
+}
+
+# ---------------------------------------------------------------------
+# ESTACIONES RIO ARRIBA — señal temprana INFORMATIVA (agregado 06/09/2026)
+#
+# IMPORTANTE - QUE ES Y QUE NO ES ESTO:
+# Esto NO es una prediccion. No calculamos "en X dias vas a tener Y
+# metros" - eso requiere un modelo hidrologico validado (lo que hace
+# el INA oficialmente, pendiente de integrar) o al menos confirmar que
+# una correlacion historica sigue siendo valida con el sistema de
+# medicion actual (ver la nota en sistema_defensas de rio_negro sobre
+# los "39m en Iguazu" de 1983, que NO esta confirmado).
+#
+# Lo que SI es: mostrar como esta el rio MAS ARRIBA en este mismo
+# momento, para que cualquiera pueda ver la tendencia con sus propios
+# ojos sin que nosotros calculemos nada ni prometamos un numero futuro.
+# Datos semilla verificados contra fich.unl.edu.ar (Prefectura Naval /
+# CIM-UNL) el 30/08/2026 - pendiente de automatizar su actualizacion
+# (ver actualizar_niveles.py).
+# ---------------------------------------------------------------------
+ESTACIONES_RIO_ARRIBA: dict = {
+    "posadas": {
+        "nombre": "Posadas (Misiones)", "rio": "Parana",
+        "nivel_metros": 10.00, "tendencia": "crece", "variacion_m": 0.12,
+        "umbral_alerta": 11.00, "umbral_evacuacion": 12.00,
+        "distancia_aprox": "Aguas arriba de Corrientes/Chaco - el agua tarda varios dias en llegar.",
+    },
+    "santa_ana": {
+        "nombre": "Santa Ana (Misiones)", "rio": "Parana",
+        "nivel_metros": 7.45, "tendencia": "estable", "variacion_m": 0.0,
+        "umbral_alerta": 9.30, "umbral_evacuacion": 9.80,
+        "distancia_aprox": "Aguas arriba de Posadas.",
+    },
+    "eldorado": {
+        "nombre": "Eldorado (Misiones)", "rio": "Parana",
+        "nivel_metros": 8.50, "tendencia": "baja", "variacion_m": -1.00,
+        "umbral_alerta": 23.00, "umbral_evacuacion": 25.00,
+        "distancia_aprox": "Mas arriba todavia, cerca del limite con Brasil.",
+    },
+    "fuente": "Prefectura Naval Argentina, via CIM-UNL (fich.unl.edu.ar/cim/rios/parana/alturas). Verificado 30/08/2026.",
+    "ultima_verificacion": "2026-08-30",
 }
 
 
@@ -1067,6 +1126,17 @@ def listar_alertas_smn():
     """Alertas meteorologicas vigentes del SMN (Chaco en general + localidades
     pluviales especificas sin rio cerca, como Charata o Santa Sylvina)."""
     return ALERTAS_SMN
+
+
+@app.get("/senales-tempranas")
+def obtener_senales_tempranas():
+    """
+    Estado actual de estaciones RIO ARRIBA (Posadas, Santa Ana, Eldorado -
+    Misiones), como contexto informativo. NO es una prediccion - ver la
+    nota completa junto a ESTACIONES_RIO_ARRIBA sobre por que no
+    calculamos dias ni metros futuros con esto todavia.
+    """
+    return ESTACIONES_RIO_ARRIBA
 
 
 @app.post("/alertas/actualizar")
