@@ -155,3 +155,4 @@ def enviar_push_localidad(localidad: str, titulo: str, cuerpo: str, urgente: boo
                 desactivar_token(tokens[idx])
 
     return {"enviados": respuesta.success_count, "fallidos": respuesta.failure_count}
+
