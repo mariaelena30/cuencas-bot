@@ -326,6 +326,15 @@ localidades: dict = {
         "conectado": False, "ultima_verificacion": "2026-08-29",
         "tipo_inundacion_dominante": "pluvial",
         "influencia_internacional": None,
+        "zonificacion_riesgo_topografico": {
+            "fuente": "Meza, J. (2020). Analisis comparativo de los modelos digitales de elevaciones SRTM y MDE-Ar 2.0... Revista Geografica Digital, UNNE-CONICET, Vol 17 N33.",
+            "metodologia": "Modelo Digital de Elevaciones (MDE-Ar 2.0, IGN, gratuito, 30m de resolucion) cruzado con la red de cursos y cuerpos de agua locales.",
+            "peligrosidad_alta_m": "menos de 76 metros de altura - incluye Laguna Schulz, Laguna Paniagua, Banado Correntoso, Arroyo Correntoso y Rio de Oro con sus margenes.",
+            "peligrosidad_media_m": "entre 76 y 79 metros.",
+            "peligrosidad_baja_m": "mas de 79 metros.",
+            "zonas_criticas": "Este de la ciudad (margenes del Rio de Oro) y oeste (Banado Correntoso) son las zonas bajas e inundables. El centro (eje norte-sur) es la zona mas alta y segura.",
+            "nota": "Esta es la MISMA metodologia (MDE gratuito + SIG) que se puede replicar para otras localidades sin estacion de rio propia, mientras se consigue lo necesario para un modelo hidraulico completo (HEC-RAS).",
+        },
     },
     "santa_sylvina": {
         "nombre": "Santa Sylvina", "cuenca_clave": None, "nivel_metros": None,
@@ -528,6 +537,16 @@ ALERTAS_SMN: dict = {
 # CIM-UNL) el 30/08/2026 - pendiente de automatizar su actualizacion
 # (ver actualizar_niveles.py).
 # ---------------------------------------------------------------------
+DATOS_INA: dict = {
+    "fuente": None,
+    "url_original": None,
+    "fecha_actualizacion_ina": None,
+    "estaciones": {},
+    "pronostico_narrativo": None,
+    "consultado_en": None,
+}
+
+
 ESTACIONES_RIO_ARRIBA: dict = {
     "posadas": {
         "nombre": "Posadas (Misiones)", "rio": "Parana",
@@ -648,6 +667,20 @@ class ActualizacionAlertasSMN(BaseModel):
     alertas: list[dict]
     cantidad: int
     ultima_verificacion: str | None = None
+
+
+class SuscripcionPush(BaseModel):
+    token: str
+    localidad: str
+
+
+class ActualizacionINA(BaseModel):
+    fuente: str
+    url_original: str
+    fecha_actualizacion_ina: str | None = None
+    estaciones: dict
+    pronostico_narrativo: str | None = None
+    consultado_en: str | None = None
 
 
 class LecturaSensorIoT(BaseModel):
@@ -1137,6 +1170,50 @@ def obtener_senales_tempranas():
     calculamos dias ni metros futuros con esto todavia.
     """
     return ESTACIONES_RIO_ARRIBA
+
+
+@app.get("/ina")
+def obtener_datos_ina():
+    """
+    Datos oficiales del INA (Instituto Nacional del Agua) - a diferencia
+    de Prefectura (que solo mide), el INA PRONOSTICA. Incluye nivel
+    actual de Barranqueras/Corrientes + el parrafo de pronostico
+    narrativo tal cual lo publica el INA (no se inventa nada, se copia
+    literal - ver actualizar_ina.py).
+    """
+    return DATOS_INA
+
+
+@app.post("/ina/actualizar")
+def actualizar_datos_ina(datos: ActualizacionINA):
+    """Llamado por actualizar_ina.py (GitHub Actions, 1 vez por dia)."""
+    DATOS_INA["fuente"] = datos.fuente
+    DATOS_INA["url_original"] = datos.url_original
+    DATOS_INA["fecha_actualizacion_ina"] = datos.fecha_actualizacion_ina
+    DATOS_INA["estaciones"] = datos.estaciones
+    DATOS_INA["pronostico_narrativo"] = datos.pronostico_narrativo
+    DATOS_INA["consultado_en"] = (
+        datos.consultado_en or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    )
+    return {"ok": True, "ina": DATOS_INA}
+
+
+@app.post("/notificaciones/suscribir")
+def suscribir_notificaciones_push(datos: SuscripcionPush):
+    """
+    Registra el token de un celular/navegador para recibir alertas
+    push de una localidad puntual (ver src/lib/pushNotifications.ts en
+    el frontend). El envio real, cuando cambia de fase, lo dispara
+    alertas_dispatcher.py via firestore_db.enviar_push_localidad().
+    """
+    clave = datos.localidad.lower()
+    if clave not in localidades:
+        return {"error": f"Localidad '{datos.localidad}' no reconocida"}
+    try:
+        firestore_db.guardar_token_push(datos.token, clave)
+    except Exception as e:
+        return {"error": f"No se pudo guardar la suscripcion: {e}"}
+    return {"ok": True, "localidad": clave}
 
 
 @app.post("/alertas/actualizar")
