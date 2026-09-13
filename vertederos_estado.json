@@ -2,20 +2,26 @@
   "vertederos": {
     "itaipu": {
       "nombre": "Itaipú",
-      "estado": "SIN_NOTICIAS_RECIENTES",
-      "detalle": "No se encontraron titulares recientes sobre apertura/cierre de vertedero.",
-      "ultima_verificacion": "2026-09-13T10:49:11.707130+00:00"
+      "estado": "ABIERTO",
+      "fecha_evento": "2026-09-13T15:00:57+00:00",
+      "dias_desde_evento": 0,
+      "titular_fuente": "Itaipú abre el vertedero ante el aumento del caudal en su cuenca - adndigital.com.py",
+      "link_fuente": "https://news.google.com/rss/articles/CBMimwFBVV95cUxNUEM1ZGRRRnhmdGY0RkJCQUNpWjJfX3BmX2hRNzdNTHgzWHlDM1BkUENZVDF0UFpTMmYxOXZ3a29ad0hydXNyZzJXcmFjRExhSS1oamFDRHQ3LU9aZ1hSbE1YMVZPWEJhR2FlRTRVM0luV2hLaHBPZGtyaWZEaWpBT2IySmgxa2pxVVJYVWFHZ3BteHkyY0tKcmY3MA?oc=5",
+      "dias_hasta_corrientes_aprox": "4 a 7 dias",
+      "ultima_verificacion": "2026-09-13T15:19:53.827602+00:00"
     },
     "yacyreta": {
       "nombre": "Yacyretá",
       "estado": "SIN_NOTICIAS_RECIENTES",
       "detalle": "No se encontraron titulares recientes sobre apertura/cierre de vertedero.",
-      "ultima_verificacion": "2026-09-13T10:49:11.993109+00:00"
+      "ultima_verificacion": "2026-09-13T15:19:54.081294+00:00"
     }
   },
   "alerta_temprana": {
-    "hay_alerta": false,
-    "avisos": []
+    "hay_alerta": true,
+    "avisos": [
+      "Itaipú abrió vertedero hace 0 día(s) — posible subida del Paraná en Corrientes/Chaco en 4 a 7 dias."
+    ]
   },
-  "actualizado": "2026-09-13T10:49:11.993137+00:00"
+  "actualizado": "2026-09-13T15:19:54.081327+00:00"
 }
