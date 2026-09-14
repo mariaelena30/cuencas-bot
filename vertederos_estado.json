@@ -3,18 +3,18 @@
     "itaipu": {
       "nombre": "Itaipú",
       "estado": "ABIERTO",
-      "fecha_evento": "2026-09-13T18:31:56+00:00",
+      "fecha_evento": "2026-09-13T21:36:25+00:00",
       "dias_desde_evento": 0,
-      "titular_fuente": "Por las intensas lluvias en la zona, Itaipú abrió sus compuertas esta madrugada - Flipr.news",
-      "link_fuente": "https://news.google.com/rss/articles/CBMi1wFBVV95cUxPeVhzMXdsQnB2bDh2ZHJVQWhvR3o2MGVxR0U3S1hDbGZpdEVWc1RZdGNhMk1qRG42S2FBODlaT3F6blFFQW43LXhqRy1QeDZFSW81VEtzZ3FPTDhIblZCOFVTN2ZJYzBQc0xJVjIyRmwzSi12dTltT1pEOTBhRVNXWW81bkJYYTJxNEtzVzB6ek1mbEN0WFF1NHREMW93V3A0bkxmeEVuOU5RU0pqeTJXY3VBZnJZcTk3R2luc2J2OHZhTFA3NlBmZ2dSdU5UYmFiVWZDRUp4bw?oc=5",
+      "titular_fuente": "ElNiño | Itaipú abrió sus compuertas y libera hasta 3.800 metros cúbicos por segundo: qué puede pasar con el Paraná aguas abajo - MisionesOnline",
+      "link_fuente": "https://news.google.com/rss/articles/CBMib0FVX3lxTE5PeXFyaW43eW1PTmplT09ETjZiQzU4RWZUN3BZYUVFeHNBdXZtREpUTlViRHlMS09Ec3RqaHlOVlltRTA0X091YmpqQklaa2MxRU9ZTGhtVTAtTnZWTDVMbVhhc2VaVE81Rm93ZnZRSQ?oc=5",
       "dias_hasta_corrientes_aprox": "4 a 7 dias",
-      "ultima_verificacion": "2026-09-13T20:01:09.284705+00:00"
+      "ultima_verificacion": "2026-09-14T02:29:08.697050+00:00"
     },
     "yacyreta": {
       "nombre": "Yacyretá",
       "estado": "SIN_NOTICIAS_RECIENTES",
       "detalle": "No se encontraron titulares recientes sobre apertura/cierre de vertedero.",
-      "ultima_verificacion": "2026-09-13T20:01:09.776663+00:00"
+      "ultima_verificacion": "2026-09-14T02:29:08.899819+00:00"
     }
   },
   "alerta_temprana": {
@@ -23,5 +23,5 @@
       "Itaipú abrió vertedero hace 0 día(s) — posible subida del Paraná en Corrientes/Chaco en 4 a 7 dias."
     ]
   },
-  "actualizado": "2026-09-13T20:01:09.776695+00:00"
+  "actualizado": "2026-09-14T02:29:08.899843+00:00"
 }
