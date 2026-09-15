@@ -3,25 +3,30 @@
     "itaipu": {
       "nombre": "Itaipú",
       "estado": "ABIERTO",
-      "fecha_evento": "2026-09-15T00:36:45+00:00",
+      "fecha_evento": "2026-09-15T10:51:17+00:00",
       "dias_desde_evento": 0,
-      "titular_fuente": "Itaipú abrió las compuertas del vertedero tras las intensas lluvias y monitorean la cuenca del Paraná - Stop en línea",
-      "link_fuente": "https://news.google.com/rss/articles/CBMi7wFBVV95cUxPQTVZbVRwamJhOWFxN3NyMzZkcGM1aHZiZjVucHBHZkFWaG44bXhSVS0zSWRZa1pvMzN0OHFlSzFOa1lfeXAxMmh1Ri1ja29MZFNRWTZWUXJ1aVhtZEV3SlNpLVNVNm0zazBldktRcGZ6VjFGdldVdkJOaldZTDlmQWc3cXpYQXNlMUtLSTNsRWtrRy1iSUw1YUJDcEN6eUF5Y05JYW5ZSVctbnBOUGZ2OEFockdSeTUyejNkOGo3M3IzNl9lQnNRQ1hsZ18zeFhibzJSaVJ0Sk5PdU9GcExmU3VTdGNzSkxNd3lWaWVUONIB9AFBVV95cUxNZ096UklsZ1JXQWdueGlwX1djY1k2dGhBS05ZQVJieE1HUmpRM1F3OVZtR2VJdkN4amJpYlUtV2dPazhBT2V1c21JRklxVUJSU3FPODJaYnQ4RWN5elFHNXg2OF9scmFXb18wZzVEWFQ2di1xanMwejRVY0hyQkZMOGtOUTlPQ1lrdkpUY19SbmZLU0d5VU5XZzU0MXMzdFlfSVhobUc5N1lNTG1ubnk0THV1MVdUV2lCUXpsaHYtc3RsVTRUelpGdnU4TG5ZOXNzaGRfbUZ1ZVpjUTE4WFN1U3BKSVR6VW9RZTQxYVhwUVVVbFJ0?oc=5",
+      "titular_fuente": "Apertura del vertedero de Itaipú: el río Paraná podría alcanzar niveles de alerta hacia finales de año - Elonce.com",
+      "link_fuente": "https://news.google.com/rss/articles/CBMihgFBVV95cUxQX29rMHFvZjloSnFKVkNhRngydmZQeS1ObzhROGpEUE9raW1jczB4ekVubXV4VVJWZkg4OUpMbGhGNGRrMmptaWg1aXpjeU43T3FsOExTTGFGeVVuczgwZDNINXBiSzByWHJ3bXBGcDJVSUFNR0JoYWJPbURKM1lWd1JGaVFpUdIBhgFBVV95cUxQX29rMHFvZjloSnFKVkNhRngydmZQeS1ObzhROGpEUE9raW1jczB4ekVubXV4VVJWZkg4OUpMbGhGNGRrMmptaWg1aXpjeU43T3FsOExTTGFGeVVuczgwZDNINXBiSzByWHJ3bXBGcDJVSUFNR0JoYWJPbURKM1lWd1JGaVFpUQ?oc=5",
       "dias_hasta_corrientes_aprox": "4 a 7 dias",
-      "ultima_verificacion": "2026-09-15T10:42:48.032023+00:00"
+      "ultima_verificacion": "2026-09-15T15:55:49.288379+00:00"
     },
     "yacyreta": {
       "nombre": "Yacyretá",
-      "estado": "SIN_NOTICIAS_RECIENTES",
-      "detalle": "No se encontraron titulares recientes sobre apertura/cierre de vertedero.",
-      "ultima_verificacion": "2026-09-15T10:42:48.248222+00:00"
+      "estado": "ABIERTO",
+      "fecha_evento": "2026-09-15T13:27:31+00:00",
+      "dias_desde_evento": 0,
+      "titular_fuente": "Itaipú libera agua por lluvias y mantendrá apertura 10 días - rdn.com.py",
+      "link_fuente": "https://news.google.com/rss/articles/CBMimgFBVV95cUxOUEFaRWpIRFYzNTRzQkNnbDhDbGlIWHdXTWVLcVNMR0p5MGlGcWt4QmhDUVZ2aTNVZy14ZkVBQjhEYXZFTWdfZEx3dFktVE5wNUFRdG9uSWRhXzRkTHNGZW1FaW1OZ1hzMVJ2SXN0dGpROW5JcWM1eXNiOExiaC1hQmZ4Nm9WVXcyRXpNbERkS245bDQ4aFAwSHh3?oc=5",
+      "dias_hasta_corrientes_aprox": "1 a 3 dias",
+      "ultima_verificacion": "2026-09-15T15:55:49.576881+00:00"
     }
   },
   "alerta_temprana": {
     "hay_alerta": true,
     "avisos": [
-      "Itaipú abrió vertedero hace 0 día(s) — posible subida del Paraná en Corrientes/Chaco en 4 a 7 dias."
+      "Itaipú abrió vertedero hace 0 día(s) — posible subida del Paraná en Corrientes/Chaco en 4 a 7 dias.",
+      "Yacyretá abrió vertedero hace 0 día(s) — posible subida del Paraná en Corrientes/Chaco en 1 a 3 dias."
     ]
   },
-  "actualizado": "2026-09-15T10:42:48.248258+00:00"
+  "actualizado": "2026-09-15T15:55:49.576903+00:00"
 }
