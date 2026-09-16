@@ -8,17 +8,17 @@
       "titular_fuente": "Itaipú: mantendrán controlada apertura del vertedero para evitar inundaciones ribereñas - abc.com.py",
       "link_fuente": "https://news.google.com/rss/articles/CBMiygFBVV95cUxOREVDNTZucS10UEF5Z1VHcV8yQXllTFhlUTdYZFpUNUJCbW1rSW5JWWhPS0dEYnktNVUxTTlndVFxYURidmcxdE93LUh3bUNyWi1xWm1rTTRvVDc4cFc2RzN0MUY5emVUTGxIaU5CblhtcUhyRGdMNzQ4R040aFc5NTZtVGUwWnhabGFPb0NCSzNwdHFfZE9FQU5YSEl4NkNrd2cyRVBnMkJzTDlPNXhYaGlLQUZDeVUwLXZ5YkgzdUFXckxyZTZhd2Zn0gHeAUFVX3lxTE1zSnQ5VnhxQXkzNENGUEt2UzMwRmhGMWEwS2x6WXRVN1VtZjVtam9SejFHWnh1c1FUdUFJQ0xUZ0F3bUVNNDgyYnhDMV9UZ19OMzdGR3hvakozSGtNVGJPeXpnVTdrQWxpSGd0cVVYNk9BS2VZdERRaUUzTENaYUlfZWFEOFpFTVRYU2tlVjUxNkgxZXZvSGRYUmxaSG1fODBrUGhBa2ZtSWtrRXJVUVJYZWQzNU9CTnFEaFVTZEplbGhickQ1QzB1UVVsQlFmYVBGWGV3ZHJ0YjVOY0R3QQ?oc=5",
       "dias_hasta_corrientes_aprox": "4 a 7 dias",
-      "ultima_verificacion": "2026-09-16T02:27:48.628209+00:00"
+      "ultima_verificacion": "2026-09-16T10:30:33.525399+00:00"
     },
     "yacyreta": {
       "nombre": "Yacyretá",
       "estado": "ABIERTO",
-      "fecha_evento": "2026-09-15T21:54:57+00:00",
+      "fecha_evento": "2026-09-15T11:30:29+00:00",
       "dias_desde_evento": 0,
-      "titular_fuente": "Itaipú: mantendrán controlada apertura del vertedero para evitar inundaciones ribereñas - abc.com.py",
-      "link_fuente": "https://news.google.com/rss/articles/CBMi3gFBVV95cUxNc0p0OVZ4cUF5MzRDRlBLdlMzMEZoRjFhMEtsell0VTdVbWY1bWpvUnoxR1p4dXNRVHVBSUNMVGdBd21FTTQ4MmJ4QzFfVGdfTjM3Rkd4b2pKM0hrTVRiT3l6Z1U3a0FsaUhndHFVWDZPQUtlWXREUWlFM0xDWmFJX2VhRDhaRU1UWFNrZVY1MTZIMWV2b0hkWFJsWkhtXzgwa1BoQWtmbUlra0VyVVFSWGVkMzVPQk5xRGhVU2RKZWxoYnJENUMwdVFVbEJRZmFQRlhld2RydGI1TmNEd0HSAd4BQVVfeXFMTXNKdDlWeHFBeTM0Q0ZQS3ZTMzBGaEYxYTBLbHpZdFU3VW1mNW1qb1J6MUdaeHVzUVR1QUlDTFRnQXdtRU00ODJieEMxX1RnX04zN0ZHeG9qSjNIa01UYk95emdVN2tBbGlIZ3RxVVg2T0FLZVl0RFFpRTNMQ1phSV9lYUQ4WkVNVFhTa2VWNTE2SDFldm9IZFhSbFpIbV84MGtQaEFrZm1Ja2tFclVRUlhlZDM1T0JOcURoVVNkSmVsaGJyRDVDMHVRVWxCUWZhUEZYZXdkcnRiNU5jRHdB?oc=5",
+      "titular_fuente": "Itaipú abrió sus compuertas durante 10 días: monitorean el impacto en el río Paraná - entremediosweb.com",
+      "link_fuente": "https://news.google.com/rss/articles/CBMirwFBVV95cUxNSnJzOG1aUGtIallHMVNBemtMeDFicE1keWdEVlNYZmRMX1pNU0p4TzlCQUNWZEJ0V2RNeVRuS3NXMkRNVV9hLWpZTVpnMHZqbWVQMGpxaUhJUGNxWmlhMWFjNno3T00zM05CaVdzak02M2w0cTJiNHR6cnpfTDhCYWpaS0pJN01lNXh0VDJ0OTlTa05BQldNaVhncEt5aUdSZVZyWVZ0Wjg1c0MtcjRF?oc=5",
       "dias_hasta_corrientes_aprox": "1 a 3 dias",
-      "ultima_verificacion": "2026-09-16T02:27:48.959172+00:00"
+      "ultima_verificacion": "2026-09-16T10:30:33.818219+00:00"
     }
   },
   "alerta_temprana": {
@@ -28,5 +28,5 @@
       "Yacyretá abrió vertedero hace 0 día(s) — posible subida del Paraná en Corrientes/Chaco en 1 a 3 dias."
     ]
   },
-  "actualizado": "2026-09-16T02:27:48.959191+00:00"
+  "actualizado": "2026-09-16T10:30:33.818238+00:00"
 }
