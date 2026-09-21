@@ -1,12 +1,12 @@
 {
   "encontrada": true,
-  "numero": "Nº 4/2026",
-  "titulo": "Nota Técnica Conjunta Nº 4/2026 ECOTECNOLOGIAS/PPGECAM/UFSM y Departamento de Hidráulica/UNNE. Actualización del seguimiento del escenario El Niño 2026-2027 y orientaciones para los municipios de la Provincia del Chaco",
-  "descripcion": "<p class=\"MsoNormal\"><span>La Nota T&eacute;cnica N&ordm; 4 consolida el diagn&oacute;stico presentado en la Nota T&eacute;cnica N&ordm; 3: El Ni&ntilde;o se encuentra establecido y contin&uacute;a fortaleci&eacute;ndose. Aunque los organismos y modelos difieren respecto de su intensidad m&aacute;xima, las evaluaciones del SMN, NOAA/CPC, IRI, ECMWF y OMM convergen en un evento fuerte o muy fuerte, con m&aacute;xima expresi&oacute;n prevista hacia fines de 2026. De concretarse los escenarios m&aa",
-  "fecha_publicacion": "2026-08-14",
-  "doi": "10.5281/zenodo.21939663",
-  "url_doi": "https://doi.org/10.5281/zenodo.21939663",
-  "url_pdf": "https://zenodo.org/api/records/21939663/files/Nota_Tecnica_4_ElNino_Chaco_2026_v14ago2026.pdf/content",
+  "numero": "Nº 5/2026",
+  "titulo": "NOTA TÉCNICA CONJUNTA Nº 5/2026 ECOTECNOLOGIAS/PPGECAM/UFSM y Departamento de Hidráulica/UNNE: Actualización de septiembre del seguimiento de El Niño 2026-2027 y de las perspectivas hidrometeorológicas para la Provincia del Chaco",
+  "descripcion": "",
+  "fecha_publicacion": "2026-09-17",
+  "doi": "10.5281/zenodo.22821232",
+  "url_doi": "https://doi.org/10.5281/zenodo.22821232",
+  "url_pdf": "https://zenodo.org/api/records/22821232/files/Nota_Tecnica_5_ElNino_Chaco_2026_17sep2026.pdf/content",
   "autores": [
     "Allasia Piccilli, Daniel Gustavo",
     "Chicherit, Yamila Soledad",
@@ -16,7 +16,7 @@
     "RUBERTO, Alejandro",
     "Depettris, Carlos Alberto",
     "Gómez, Marcelo Justo Manuel",
-    "Ríos, Julio César"
+    "Rios, Julio Cesar"
   ],
-  "ultima_verificacion": "2026-09-14T15:31:43.935606+00:00"
+  "ultima_verificacion": "2026-09-21T15:32:12.858201+00:00"
 }
