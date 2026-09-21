@@ -3,12 +3,12 @@
     "itaipu": {
       "nombre": "Itaipú",
       "estado": "ABIERTO",
-      "fecha_evento": "2026-09-15T18:20:00+00:00",
-      "dias_desde_evento": 5,
-      "titular_fuente": "La represa binacional Itaipú abrió sus compuertas tras las abundantes lluvias registradas producto de El Niño - Perfil",
-      "link_fuente": "https://news.google.com/rss/articles/CBMi8AFBVV95cUxNYlU0MHp4ZmYzTjhvOTJXaFdmT0RhMC1xWVJQbGhDckI5NVhQUTdjMzRkbWl3UVNKRklSeFdWemd2S1VERTV6SjdINHUtdU5yNkd4LTZEaV9UYnVzM1IxbU5NYkJ2ekdUYmhTY0pza01fa0RzWEVrcHN6TUp5U2ZQTHZXVWNXQWRLZ3hEQm1Xak9PNHRrZzg1Uk1vdGFndVlVYkd2ckt3MGEzQ3p2Vm14X2p0dzFMRDBBNEZCVXJLWjkzVkFuc0tOeUtYOEpBc3ZlYVkxQXF2WmR5MHhpRWFWYkx6UmxRUmRoWE52S0I5cUHSAfYBQVVfeXFMT3N5ZXVRdVFrUFZmamdBcDYzWlRyT2x5ZjF3dTVpVy1FeE5uak5kU0ZWVHAyQWZwS0U2d0N3MllBajRybXB6NnQtRndWZmktRlJDV0NGZ3JPd1NFX0RfM3luWTJOZHRtYmpjQmx6S0VncjBxek42QlUtbUxjcHRvNmdaRTl3SzltTVAzV0dnZHgtZkc5UFhqZHhqOUozdVJLbnhXeWRxVWpUQ2JjV3RFV2dFa3JsSVhVMVhYSURhYkJjdHdjbWlfY1VmNy1JN0dPRExVZE1vVE12LXRyem5sc1RhaExJdk05dTN4VnN0eHRhZGROWmVR?oc=5",
+      "fecha_evento": "2026-09-18T21:29:58+00:00",
+      "dias_desde_evento": 2,
+      "titular_fuente": "Itaipú abre sus compuertas: el impacto de El Niño acelera la liberación masiva de agua en el río Paraná - Chaco On Line",
+      "link_fuente": "https://news.google.com/rss/articles/CBMiuAFBVV95cUxPTlhoM2dNY0I2cGM2c2VYdE81bXItdVpDYzA5QkJHV3lpajZmaU1oSEpYYndWQWlOWkdfcmdRWFI3WUkxWkxtMzI1cTVGdGdzMktZVDZSX01QY3AtQm1jSWFMZkJROG5LXzRNVnZiTGRnNzNwbzF6TUhTaVFaZlJSLTZyQTA3anZoMnlBLUJHRGRiMlRia0stZ3RsZG9xcHVxTUpOUXd5S2JxTTJXQktoM2xIaGFGbXVS0gG4AUFVX3lxTE9OWGgzZ01jQjZwYzZzZVh0TzVtci11WkNjMDlCQkdXeWlqNmZpTWhISlhid1ZBaU5aR19yZ1FYUjdZSTFaTG0zMjVxNUZ0Z3MyS1lUNlJfTVBjcC1CbWNJYUxmQlE4bktfNE1WdmJMZGc3M3BvMXpNSFNpUVpmUlItNnJBMDdqdmgyeUEtQkdEZGIyVGJrSy1ndGxkb3FwdXFNSk5Rd3lLYnFNMldCS2gzbEhoYUZtdVI?oc=5",
       "dias_hasta_corrientes_aprox": "4 a 7 dias",
-      "ultima_verificacion": "2026-09-21T11:29:28.525037+00:00"
+      "ultima_verificacion": "2026-09-21T17:28:00.957717+00:00"
     },
     "yacyreta": {
       "nombre": "Yacyretá",
@@ -18,15 +18,15 @@
       "titular_fuente": "Itaipú abre sus compuertas: el impacto de El Niño acelera la liberación masiva de agua en el río Paraná - Chaco On Line",
       "link_fuente": "https://news.google.com/rss/articles/CBMiuAFBVV95cUxPTlhoM2dNY0I2cGM2c2VYdE81bXItdVpDYzA5QkJHV3lpajZmaU1oSEpYYndWQWlOWkdfcmdRWFI3WUkxWkxtMzI1cTVGdGdzMktZVDZSX01QY3AtQm1jSWFMZkJROG5LXzRNVnZiTGRnNzNwbzF6TUhTaVFaZlJSLTZyQTA3anZoMnlBLUJHRGRiMlRia0stZ3RsZG9xcHVxTUpOUXd5S2JxTTJXQktoM2xIaGFGbXVS0gG4AUFVX3lxTE9OWGgzZ01jQjZwYzZzZVh0TzVtci11WkNjMDlCQkdXeWlqNmZpTWhISlhid1ZBaU5aR19yZ1FYUjdZSTFaTG0zMjVxNUZ0Z3MyS1lUNlJfTVBjcC1CbWNJYUxmQlE4bktfNE1WdmJMZGc3M3BvMXpNSFNpUVpmUlItNnJBMDdqdmgyeUEtQkdEZGIyVGJrSy1ndGxkb3FwdXFNSk5Rd3lLYnFNMldCS2gzbEhoYUZtdVI?oc=5",
       "dias_hasta_corrientes_aprox": "1 a 3 dias",
-      "ultima_verificacion": "2026-09-21T11:29:28.773612+00:00"
+      "ultima_verificacion": "2026-09-21T17:28:01.230112+00:00"
     }
   },
   "alerta_temprana": {
     "hay_alerta": true,
     "avisos": [
-      "Itaipú abrió vertedero hace 5 día(s) — posible subida del Paraná en Corrientes/Chaco en 4 a 7 dias.",
+      "Itaipú abrió vertedero hace 2 día(s) — posible subida del Paraná en Corrientes/Chaco en 4 a 7 dias.",
       "Yacyretá abrió vertedero hace 2 día(s) — posible subida del Paraná en Corrientes/Chaco en 1 a 3 dias."
     ]
   },
-  "actualizado": "2026-09-21T11:29:28.773631+00:00"
+  "actualizado": "2026-09-21T17:28:01.230134+00:00"
 }
