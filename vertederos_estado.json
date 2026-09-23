@@ -3,29 +3,23 @@
     "itaipu": {
       "nombre": "Itaipú",
       "estado": "CERRADO",
-      "fecha_evento": "2026-09-23T00:38:30+00:00",
+      "fecha_evento": "2026-09-23T00:42:17+00:00",
       "dias_desde_evento": 0,
       "titular_fuente": "La represa Itaipú cerró sus compuertas tras diez días de descargas y prevé reabrirlas el fin de semana - Canal Doce Misiones",
       "link_fuente": "https://news.google.com/rss/articles/CBMigwFBVV95cUxNaVNvdjVIZThuT2dLcnlQclZOS3p3SG85eHNqR1cyMllQa2cxcV9ILWF5LVVyNDhRZk1PT0tiMzFOSTZ2ZHFxRHY5U3VtbmtHOWdzalBCeVlLaHBLeE9STnhBT29qcF8xSnQ5Tmd6Q0tDWHpqWjk0NEFPMXVwUG5jVFFSNA?oc=5",
       "dias_hasta_corrientes_aprox": "4 a 7 dias",
-      "ultima_verificacion": "2026-09-23T02:30:08.256823+00:00"
+      "ultima_verificacion": "2026-09-23T10:29:35.634590+00:00"
     },
     "yacyreta": {
       "nombre": "Yacyretá",
-      "estado": "ABIERTO",
-      "fecha_evento": "2026-09-18T21:13:39+00:00",
-      "dias_desde_evento": 4,
-      "titular_fuente": "Itaipú abre sus compuertas: el impacto de El Niño acelera la liberación masiva de agua en el río Paraná - Chaco On Line",
-      "link_fuente": "https://news.google.com/rss/articles/CBMiwAFBVV95cUxOSndNanhOVkp0VVRQZ2RfWkNYSmpObTFZVGxKeGtjSnB5OUlGMlY5R28xUjluU3pMaTFlRWItVDM1QmVwOUt1dkpWSk1jaEVlNHFlYnlaOEZFQkFIVzZTT1YwZzY2NmJIYkQyS3V3X3d3UkFCcERUd3JTdFozOEVnVVZpa3JMc3NYdjd0S2tFS3JOdE1COWxwWnN6OUZvM2Z1aEVVNkZnNWdNUVNDbWhFaFpubnZpVmNmNFdDRkx0VV_SAbgBQVVfeXFMT05YaDNnTWNCNnBjNnNlWHRPNW1yLXVaQ2MwOUJCR1d5aWo2ZmlNaEhKWGJ3VkFpTlpHX3JnUVhSN1lJMVpMbTMyNXE1RnRnczJLWVQ2Ul9NUGNwLUJtY0lhTGZCUThuS180TVZ2YkxkZzczcG8xek1IU2lRWmZSUi02ckEwN2p2aDJ5QS1CR0RkYjJUYmtLLWd0bGRvcXB1cU1KTlF3eUticU0yV0JLaDNsSGhhRm11Ug?oc=5",
-      "dias_hasta_corrientes_aprox": "1 a 3 dias",
-      "ultima_verificacion": "2026-09-23T02:30:08.475293+00:00"
+      "estado": "SIN_NOTICIAS_RECIENTES",
+      "detalle": "No se encontraron titulares recientes sobre apertura/cierre de vertedero.",
+      "ultima_verificacion": "2026-09-23T10:29:36.075385+00:00"
     }
   },
   "alerta_temprana": {
-    "hay_alerta": true,
-    "avisos": [
-      "Yacyretá abrió vertedero hace 4 día(s) — posible subida del Paraná en Corrientes/Chaco en 1 a 3 dias."
-    ]
+    "hay_alerta": false,
+    "avisos": []
   },
-  "actualizado": "2026-09-23T02:30:08.475313+00:00"
+  "actualizado": "2026-09-23T10:29:36.075406+00:00"
 }
