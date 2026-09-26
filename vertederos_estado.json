@@ -3,12 +3,12 @@
     "itaipu": {
       "nombre": "Itaipú",
       "estado": "ABIERTO",
-      "fecha_evento": "2026-09-25T20:38:00+00:00",
+      "fecha_evento": "2026-09-25T12:31:45+00:00",
       "dias_desde_evento": 0,
-      "titular_fuente": "Itaipú reabre temporalmente el vertedero para regular el nivel del embalse - ultimahora.com",
-      "link_fuente": "https://news.google.com/rss/articles/CBMiowFBVV95cUxOYTB5T01OdEF6MFR1QkV0dHRUb0t1aVhyNDg1a2NKd053R1I5alZlMWVoNDdnd1FXZGF6UTVrdnUzeDU4bmhycFdqNnJlVDFlZ1A2YVh0aFMwNFJqZ2lIaFhwbThUZVQtQWVneG5NdjhMenRNbko1NlZvUkMtM0ZuVUgzWTdIQ285TFlObFJ6Y3NFWld6ZUh4UWFPeEIyRXJYLVl30gGwAUFVX3lxTE81RHdWV25Lb0tDTUdsOWwtb2J1cFhVS3o3dkRfNllCcng1MHV6Z1l3dXRBZnZ2UnQzSUVqRlZlM21NMXY5X1BBdTZ2VnhHYkVoc1BxSnRXVmItbVNfREhMUktrQTNXX0h2U2xlNmdZVjVDR01iZW9GX05EanJ2ai1Ec3dQel9vRTdCdkpvejJFVTBEMjR1V3g4UVp1MnB2NXVxMGpVTVZ4STd5TzZzSC00?oc=5",
+      "titular_fuente": "ITAIPU abre nuevamente de manera temporal su vertedero para regular el nivel del embalse - itaipu.gov.py",
+      "link_fuente": "https://news.google.com/rss/articles/CBMiywFBVV95cUxNUXgwY3JaM0xjMy1tNGlnWEtYY1BJV0ZTWWtXT3hpbGx4Y0dVVllKSmtaUzZCYzFYT0ExUkJkcHdwOC1wSFVaeDNYT2trR0pDWFRxeldDTGZIcjltQ1pWcDdFWk1lQy1vczNuWE04aXowM0dSMkFac0xROVZJZ2tQdGhDVE5pMFItUnFXRGxzR3B1akpCVVphNnpSeDVXWWNxUk9fdjExXzZYdUNXS1ZoVjVyeXM4MFc3ZVQ4ODNFOWRJSndhcU1iNDEyaw?oc=5",
       "dias_hasta_corrientes_aprox": "4 a 7 dias",
-      "ultima_verificacion": "2026-09-25T20:53:21.192932+00:00"
+      "ultima_verificacion": "2026-09-26T02:38:18.428136+00:00"
     },
     "yacyreta": {
       "nombre": "Yacyretá",
@@ -18,7 +18,7 @@
       "titular_fuente": "La represa Itaipú cerró su vertedero, pero prevé reabrirlo durante el fin de semana - Elonce.com",
       "link_fuente": "https://news.google.com/rss/articles/CBMioAFBVV95cUxOWnVWdm5rZXBmODhqLTdfeWJsVVR6WTBWZWFSM3dka3N0YWhSc2d2WmVmaXcwYkNQcEp3eWRhcmdsT1E0YzNYOUJub1VHM3Z0d2NBbDltNE5JRzdfNVdjc2tnYklSMjZCZ2M4RHlvM2FCNG1qVGk0S0VHUUM3ZVZSZ0owanF0UDZoQTAxSUcxNFV6cVVnU3dLRnlRdGstM00y0gGaAUFVX3lxTFBvYkl5QlZNN0hnUGV3bm5CV1ZxUXhZb1FhSG1pd2pqY0tNZ3BYLWlkOUNfcGIwbnBRMVJkYjBiakphWDdfYWZqMFVYNnctMzBnTVppTUhrY2JHVDJUcjU4Vmp1UWxDT29yOXl1cmVsSllCY0RtRHFmN0d0cFlGLWp6bm9JdkZpRndFR2FqaUFkYjVkYmR6UjZrRFE?oc=5",
       "dias_hasta_corrientes_aprox": "1 a 3 dias",
-      "ultima_verificacion": "2026-09-25T20:53:21.522319+00:00"
+      "ultima_verificacion": "2026-09-26T02:38:19.192625+00:00"
     }
   },
   "alerta_temprana": {
@@ -27,5 +27,5 @@
       "Itaipú abrió vertedero hace 0 día(s) — posible subida del Paraná en Corrientes/Chaco en 4 a 7 dias."
     ]
   },
-  "actualizado": "2026-09-25T20:53:21.522339+00:00"
+  "actualizado": "2026-09-26T02:38:19.192643+00:00"
 }
