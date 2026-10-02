@@ -28,8 +28,12 @@ import firestore_db
 
 UMBRAL_VELOCIDAD_M_H = 0.05  # 5 cm/hora sostenido = ascenso peligrosamente rapido
 
-app = FastAPI(title="Portal Hidrico Chaco - API")
-
+app = FastAPI(
+    title="Portal Hidrico Chaco - API",
+    docs_url="/docs" if os.environ.get("ENABLE_DOCS") == "1" else None,
+    redoc_url=None,
+    openapi_url="/openapi.json" if os.environ.get("ENABLE_DOCS") == "1" else None,
+)
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
