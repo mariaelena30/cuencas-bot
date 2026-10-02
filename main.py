@@ -42,12 +42,18 @@ if SUPABASE_URL and SUPABASE_KEY:
     from supabase import create_client
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+ORIGENES_PERMITIDOS = [
+    o.strip()
+    for o in os.environ.get("CORS_ORIGINS", "https://monitoreo-bay.vercel.app").split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=ORIGENES_PERMITIDOS,
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "X-API-Key"],
 )
 
 EXPLICACIONES = {
