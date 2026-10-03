@@ -2,8 +2,8 @@ name: Actualizar precipitacion
 
 on:
   schedule:
-    # Corre todos los dias a las 10:00 UTC (07:00 hora Chaco)
-    - cron: "0 10 * * *"
+    # Cada 3 horas, para que la "lluvia de las ultimas 24 h" sea reciente
+    - cron: "0 */3 * * *"
   workflow_dispatch: {}
 
 jobs:
@@ -23,3 +23,5 @@ jobs:
 
       - name: Correr el actualizador de precipitacion
         run: python actualizar_precipitacion.py
+        env:
+          API_KEY_SENSORES: ${{ secrets.API_KEY_SENSORES }}
