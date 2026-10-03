@@ -25,3 +25,5 @@ jobs:
 
       - name: Correr actualizar_niveles.py
         run: python actualizar_niveles.py
+        env:
+          API_KEY_SENSORES: ${{ secrets.API_KEY_SENSORES }}
