@@ -303,20 +303,62 @@ def obtener_datos_estaciones() -> dict:
     return resultado
 
 
-def actualizar_backend(localidad: str, nivel_metros: float) -> bool:
+def publicar_al_backend(filas):
+
+    import requests
+
     clave_api = os.environ.get("API_KEY_SENSORES", "")
-    try:
-        r = requests.post(
-            f"{BACKEND_URL}/hidrologia/actualizar",
-            json={"localidad": localidad, "nivel_metros": nivel_metros},
-            headers={"X-API-Key": clave_api},
-            timeout=TIMEOUT,
-        )
-        r.raise_for_status()
-        return True
-    except Exception as e:
-        print(f"  [ERROR] No se pudo actualizar {localidad}: {e}")
-        return False
+    if not clave_api:
+        print("[AVISO] Falta API_KEY_SENSORES: no se publica nada en el backend.")
+        return
+
+    print()
+    print("=" * 78)
+    print("PUBLICANDO DATOS EN BACKEND")
+    print("=" * 78)
+
+    for f in filas:
+
+        puerto = f["puerto"]
+        altura = f["altura_actual_m"]
+
+        # Ignorar si no hay altura
+        if altura is None:
+            continue
+
+        # Ignorar puertos sin localidad configurada
+        if puerto not in MAPEO_PUERTO_A_LOCALIDAD:
+            continue
+
+        for localidad in MAPEO_PUERTO_A_LOCALIDAD[puerto]:
+
+            try:
+
+                r = requests.post(
+                    f"{BACKEND_URL}/hidrologia/actualizar",
+                    json={
+                        "localidad": localidad,
+                        "nivel_metros": altura,
+                    },
+                    headers={"X-API-Key": clave_api},
+                    timeout=60.0,
+                )
+
+                print(
+                    f"{puerto} -> "
+                    f"{localidad}: "
+                    f"{altura} m "
+                    f"(status {r.status_code})"
+                )
+
+            except Exception as e:
+
+                print(
+                    f"[ERROR] "
+                    f"{localidad}: {e}"
+                )
+
+    print("=" * 78)
 
 
 def main():
