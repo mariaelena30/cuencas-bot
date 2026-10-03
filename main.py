@@ -16,6 +16,7 @@ UMBRALES: verificados contra la tabla oficial de Prefectura Naval
 Argentina (fich.unl.edu.ar/cim/rios/parana/alturas) el 09/08/2026.
 """
 
+import hmac
 import json
 import os
 from datetime import datetime, timedelta, timezone
