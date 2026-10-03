@@ -902,6 +902,34 @@ def actualizar_hidrologia(datos: ActualizacionHidrologia, x_api_key: str | None 
 
     return {"ok": True, "localidad": _localidad_con_estado(clave)}
 
+class ActualizacionPrecipitacion(BaseModel):
+    localidad: str
+    precipitacion_acumulada_mm: float
+    fuente: str | None = None
+
+
+@app.post("/precipitacion/actualizar")
+def actualizar_precipitacion(datos: ActualizacionPrecipitacion, x_api_key: str | None = Header(default=None)):
+    exigir_clave_escritura(x_api_key)
+
+    clave = datos.localidad.lower()
+    if clave not in localidades:
+        raise HTTPException(status_code=404, detail=f"Localidad '{datos.localidad}' no reconocida")
+    if not (0.0 <= datos.precipitacion_acumulada_mm <= 1000.0):
+        raise HTTPException(status_code=422, detail="precipitacion fuera del rango posible")
+
+    nuevo = {
+        "precipitacion_acumulada_mm": datos.precipitacion_acumulada_mm,
+        "precipitacion_fuente": datos.fuente or "Open-Meteo (modelo meteorologico)",
+        "precipitacion_verificacion": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+    }
+    try:
+        firestore_db.guardar_estado(clave, nuevo)
+    except Exception:
+        localidades[clave].update(nuevo)
+
+    return {"ok": True, "localidad": _localidad_con_estado(clave)}
+
 
 @app.post("/satelital/actualizar")
 def actualizar_satelital(datos: ActualizacionSatelital):
