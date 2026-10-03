@@ -530,6 +530,17 @@ class LecturaSensorIoT(BaseModel):
 API_KEY_SENSORES = os.environ.get("API_KEY_SENSORES")
 
 
+def exigir_clave_escritura(x_api_key: str | None) -> None:
+    """Rechaza el pedido si no trae la clave correcta. Si la variable de
+    entorno no esta configurada, rechaza todo (falla cerrado)."""
+    if (
+        not API_KEY_SENSORES
+        or not x_api_key
+        or not hmac.compare_digest(x_api_key, API_KEY_SENSORES)
+    ):
+        raise HTTPException(status_code=401, detail="Clave de escritura invalida o faltante.")
+
+
 @app.get("/nota-tecnica-enso")
 def obtener_nota_tecnica_enso():
     try:
@@ -555,35 +566,32 @@ def obtener_estado_vertederos():
 
 @app.get("/historico/{estacion}")
 def obtener_historico(estacion: str, dias: int = 60):
+    texto = estacion.strip().lower().replace("-", "_").replace(" ", "_")
+    if texto.startswith("est_"):
+        texto = texto[4:]
+    if texto not in localidades:
+        raise HTTPException(status_code=404, detail="Estacion no reconocida")
+    dias = max(1, min(dias, 90))
+
     try:
-        with open("niveles_rios.json", "r", encoding="utf-8") as fh:
-            historico = json.load(fh)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {"estacion": estacion, "lecturas": [], "error": "Historico no disponible todavia."}
+        guardadas = firestore_db.leer_historico(texto)
+    except Exception:
+        return {"estacion": texto, "lecturas": [], "n_lecturas": 0, "error": "Historico no disponible."}
 
     limite = datetime.now(timezone.utc) - timedelta(days=dias)
-
-    def _fecha(fila):
-        try:
-            f = datetime.fromisoformat(fila["timestamp_consulta"].replace("Z", "+00:00"))
-            return f if f.tzinfo else f.replace(tzinfo=timezone.utc)
-        except (KeyError, ValueError, TypeError):
-            return None
-
     lecturas = []
-    for fila in historico:
-        if fila.get("puerto", "").strip().lower() != estacion.strip().lower():
+    for fila in guardadas:
+        try:
+            fecha = datetime.fromisoformat(str(fila["fecha"]).replace("Z", "+00:00"))
+            if fecha.tzinfo is None:
+                fecha = fecha.replace(tzinfo=timezone.utc)
+        except (KeyError, ValueError):
             continue
-        fecha = _fecha(fila)
-        if fecha is None or fecha < limite:
-            continue
-        lecturas.append({
-            "fecha": fila["timestamp_consulta"],
-            "altura_m": fila.get("altura_actual_m"),
-        })
+        if fecha >= limite and isinstance(fila.get("altura_m"), (int, float)):
+            lecturas.append({"fecha": fila["fecha"], "altura_m": fila["altura_m"]})
 
-    lecturas.sort(key=lambda l: l["fecha"])
-    return {"estacion": estacion, "lecturas": lecturas, "n_lecturas": len(lecturas)}
+    lecturas.sort(key=lambda x: x["fecha"])
+    return {"estacion": texto, "lecturas": lecturas, "n_lecturas": len(lecturas)}
 
 
 @app.get("/")
@@ -671,12 +679,13 @@ def obtener_localidad(clave: str):
 
 @app.post("/sensores/{clave}/lectura")
 def recibir_lectura_sensor(clave: str, datos: LecturaSensorIoT, x_api_key: str | None = Header(default=None)):
-    if API_KEY_SENSORES and x_api_key != API_KEY_SENSORES:
-        return {"error": "API key invalida o faltante. Mandar el header X-API-Key."}
+    exigir_clave_escritura(x_api_key)
 
     clave = clave.lower()
     if clave not in localidades:
-        return {"error": f"Localidad '{clave}' no reconocida"}
+        raise HTTPException(status_code=404, detail=f"Localidad '{clave}' no reconocida")
+    if datos.nivel_metros is not None and not (-1.0 <= datos.nivel_metros <= 20.0):
+        raise HTTPException(status_code=422, detail="nivel_metros fuera del rango posible")
 
     ahora = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
@@ -839,10 +848,14 @@ def barrios_de_localidad(localidad_clave: str):
 
 
 @app.post("/hidrologia/actualizar")
-def actualizar_hidrologia(datos: ActualizacionHidrologia):
+def actualizar_hidrologia(datos: ActualizacionHidrologia, x_api_key: str | None = Header(default=None)):
+    exigir_clave_escritura(x_api_key)
+
     clave = datos.localidad.lower()
     if clave not in localidades:
-        return {"error": f"Localidad '{datos.localidad}' no reconocida"}
+        raise HTTPException(status_code=404, detail=f"Localidad '{datos.localidad}' no reconocida")
+    if not (-1.0 <= datos.nivel_metros <= 20.0):
+        raise HTTPException(status_code=422, detail="nivel_metros fuera del rango posible")
 
     ahora = datetime.now(timezone.utc)
 
@@ -881,6 +894,11 @@ def actualizar_hidrologia(datos: ActualizacionHidrologia):
         firestore_db.guardar_estado(clave, nuevo_estado)
     except Exception:
         localidades[clave].update(nuevo_estado)
+
+    try:
+        firestore_db.guardar_lectura_historica(clave, datos.nivel_metros, ahora.isoformat())
+    except Exception as e:
+        print(f"No se pudo guardar el historico de {clave}: {e}")
 
     return {"ok": True, "localidad": _localidad_con_estado(clave)}
 
