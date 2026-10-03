@@ -22,6 +22,11 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Instalar dependencias
+        run: pip install requests
+
+      # Sin API_KEY_SENSORES a proposito: este paso NO publica niveles en
+      # el backend (la fuente unica de niveles es actualizar_niveles.py).
       - name: Obtener niveles de rio (CIMA)
         run: python obtener_niveles_rios.py --formato json --salida niveles_rios.json
 
@@ -29,8 +34,7 @@ jobs:
         run: python obtener_precipitacion_cedei.py --paginas 1 --csv precipitacion_cedei.csv
         continue-on-error: true
         # continue-on-error: si CEDEI cambia su HTML y el script falla,
-        # que no tumbe todo el workflow - igual queremos que se suba
-        # el archivo de niveles que sí funcionó.
+        # que no tumbe todo el workflow.
 
       - name: Commitear resultados al repo
         run: |
