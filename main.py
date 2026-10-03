@@ -21,7 +21,7 @@ import json
 import os
 from datetime import datetime, timedelta, timezone
 
-from fastapi import FastAPI, Header
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
