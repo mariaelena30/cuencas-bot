@@ -94,18 +94,19 @@ def clasificar_vegetacion(ndvi: float) -> str:
 
 
 def actualizar_backend(ndvi_promedio: float, condicion: str) -> bool:
+    clave_api = os.environ.get("API_KEY_SENSORES", "")
     try:
         r = requests.post(
             f"{BACKEND_URL}/satelital/actualizar",
             json={"ndvi_promedio": round(ndvi_promedio, 4), "condicion_vegetacion": condicion},
-            timeout=TIMEOUT,
+            headers={"X-API-Key": clave_api},
+            timeout=60.0,
         )
         r.raise_for_status()
         return True
     except Exception as e:
         print(f"[ERROR] No se pudo actualizar el backend: {e}")
         return False
-
 
 def main():
     print(f"=== Actualizador de NDVI - {datetime.now(timezone.utc).isoformat()} ===")
