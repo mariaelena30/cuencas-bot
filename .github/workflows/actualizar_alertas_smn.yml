@@ -23,6 +23,4 @@ jobs:
 
       - run: python actualizar_alertas_smn.py
         env:
-          # Configurar este secret en Settings > Secrets del repo,
-          # con la URL publica del backend (ej: Vercel/Render/etc.)
-          PORTAL_BACKEND_URL: ${{ secrets.PORTAL_BACKEND_URL }}
+          API_KEY_SENSORES: ${{ secrets.API_KEY_SENSORES }}
