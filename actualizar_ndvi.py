@@ -15,6 +15,7 @@ Fuente: ORNL DAAC MODIS/VIIRS Web Service
         https://modis.ornl.gov/data/modis_webservice.html
 """
 
+import os
 import sys
 from datetime import datetime, timezone
 
