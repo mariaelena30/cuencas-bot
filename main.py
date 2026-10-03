@@ -908,6 +908,12 @@ class ActualizacionPrecipitacion(BaseModel):
     fuente: str | None = None
 
 
+class ActualizacionPrecipitacion(BaseModel):
+    localidad: str
+    precipitacion_acumulada_mm: float
+    fuente: str | None = None
+
+
 @app.post("/precipitacion/actualizar")
 def actualizar_precipitacion(datos: ActualizacionPrecipitacion, x_api_key: str | None = Header(default=None)):
     exigir_clave_escritura(x_api_key)
@@ -932,7 +938,8 @@ def actualizar_precipitacion(datos: ActualizacionPrecipitacion, x_api_key: str |
 
 
 @app.post("/satelital/actualizar")
-def actualizar_satelital(datos: ActualizacionSatelital):
+def actualizar_satelital(datos: ActualizacionSatelital, x_api_key: str | None = Header(default=None)):
+    exigir_clave_escritura(x_api_key)
     satelital_ndvi["ndvi_promedio"] = datos.ndvi_promedio
     satelital_ndvi["condicion_vegetacion"] = datos.condicion_vegetacion
     satelital_ndvi["conectado"] = True
@@ -941,7 +948,8 @@ def actualizar_satelital(datos: ActualizacionSatelital):
 
 
 @app.post("/clima/actualizar")
-def actualizar_clima(datos: ActualizacionClima):
+def actualizar_clima(datos: ActualizacionClima, x_api_key: str | None = Header(default=None)):
+    exigir_clave_escritura(x_api_key)
     clima["fase_oni"] = datos.fase_oni
     clima["ultimo_valor_oni"] = datos.ultimo_valor_oni
     clima["conectado"] = True
@@ -956,7 +964,11 @@ def listar_alertas_smn():
 
 @app.get("/senales-tempranas")
 def obtener_senales_tempranas():
-    return ESTACIONES_RIO_ARRIBA
+    return {
+        **ESTACIONES_RIO_ARRIBA,
+        "datos_en_vivo": False,
+        "aviso": "Valores de referencia del 30/08/2026, no se actualizan en vivo.",
+    }
 
 
 @app.get("/ina")
@@ -976,6 +988,7 @@ def actualizar_datos_ina(datos: ActualizacionINA, x_api_key: str | None = Header
         datos.consultado_en or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     )
     return {"ok": True, "ina": DATOS_INA}
+
 
 @app.post("/notificaciones/suscribir")
 def suscribir_notificaciones_push(datos: SuscripcionPush):
