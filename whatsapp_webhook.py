@@ -2,32 +2,41 @@
 whatsapp_webhook.py
 --------------------
 Integracion de WhatsApp Cloud API (Meta) para el Portal Hidrico Chaco.
-Se conecta EN EL MISMO PROCESO a las funciones que ya usa main.py para
-Telegram (no hace falta HTTP interno, es todo en memoria).
+Bot SOLO INFORMATIVO: consulta de niveles y zonas vulnerables. No recibe
+ni deriva pedidos de auxilio (nadie los atiende desde aca).
 
-COMO INTEGRARLO (una sola linea al final de main.py, despues de todos
-los @app.get / @app.post que ya existen):
+COMO INTEGRARLO (al final de main.py):
 
     from whatsapp_webhook import router as whatsapp_router
     app.include_router(whatsapp_router)
 
-VARIABLES DE ENTORNO A AGREGAR EN RENDER (Settings > Environment),
-mismo lugar donde esta TFG_BOT_TOKEN:
+VARIABLES DE ENTORNO EN RENDER (Environment):
 
     WHATSAPP_TOKEN            -> token de acceso (Meta for Developers)
-    WHATSAPP_PHONE_NUMBER_ID  -> ID del numero de WhatsApp Business (lo da Meta)
-    WHATSAPP_VERIFY_TOKEN     -> string inventado por vos, ej "cuencas_chaco_2026"
-                                  (Meta te lo va a pedir al configurar el webhook)
+    WHATSAPP_PHONE_NUMBER_ID  -> ID del numero de WhatsApp Business
+    WHATSAPP_VERIFY_TOKEN     -> string inventado por vos (Meta lo pide al
+                                 configurar el webhook). Obligatorio.
+    WHATSAPP_APP_SECRET       -> "Clave secreta de la app" (Meta for
+                                 Developers > Configuracion de la app >
+                                 Basica). Se usa para comprobar que cada
+                                 mensaje viene realmente de Meta. Obligatorio:
+                                 sin esta variable el webhook rechaza todo.
 
-La URL que vas a cargar en el panel de Meta for Developers es:
-    https://<tu-app>.onrender.com/whatsapp/webhook
+URL del webhook en Meta:  https://<tu-app>.onrender.com/whatsapp/webhook
+
+CAMBIOS (03/10/2026):
+- Se verifica la firma X-Hub-Signature-256 de cada mensaje entrante.
+- Se elimino /whatsapp/sos-reports y el guardado de ubicaciones: no se
+  almacenan telefonos ni coordenadas.
+- Los niveles solo se muestran si el dato es en vivo y de las ultimas 48 h.
 """
 
-import os
+import hashlib
+import hmac
 import json
 import logging
+import os
 from datetime import datetime, timezone
-from pathlib import Path
 
 import httpx
 from fastapi import APIRouter, Request, Response, Query
@@ -37,12 +46,34 @@ router = APIRouter(prefix="/whatsapp", tags=["whatsapp"])
 
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN", "")
 PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "")
-VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "cuencas_chaco_2026")
+VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "")
+APP_SECRET = os.getenv("WHATSAPP_APP_SECRET", "")
 GRAPH_API_URL = f"https://graph.facebook.com/v21.0/{PHONE_NUMBER_ID}/messages"
 
-# Reportes SOS: un JSONL simple (una linea = un reporte). Se puede leer
-# despues desde el dashboard de Streamlit o desde un endpoint propio.
-SOS_LOG_PATH = Path(os.getenv("SOS_LOG_PATH", "sos_reports.jsonl"))
+HORAS_MAXIMAS_DATO_VIGENTE = 48
+
+PIE_OFICIAL = "_Información de referencia. Alertas oficiales: Defensa Civil 103, SMN y Prefectura._"
+
+EMERGENCIA_TEXTO = (
+    "Este bot es *solo informativo*: no recibe pedidos de auxilio ni guarda tu ubicación.\n\n"
+    "Si hay peligro, llamá ahora:\n"
+    "• Defensa Civil: *103*\n"
+    "• Bomberos: *100*\n"
+    "• Prefectura Naval (emergencias en el agua): *106*\n"
+    "• Emergencias médicas: *107*\n\n"
+    "Cuando llames, tené a mano tu dirección o una referencia, cuántas personas son "
+    "y cuánta agua hay."
+)
+
+EMOJI_POR_COLOR = {
+    "verde": "🟢",
+    "azul": "🔵",
+    "amarillo": "🟡",
+    "naranja": "🟠",
+    "rojo": "🔴",
+    "violeta": "🟣",
+    "blanco": "⚪",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -54,24 +85,40 @@ async def verify_webhook(
     hub_challenge: str = Query(None, alias="hub.challenge"),
     hub_verify_token: str = Query(None, alias="hub.verify_token"),
 ):
-    if hub_mode == "subscribe" and hub_verify_token == VERIFY_TOKEN:
+    if (
+        VERIFY_TOKEN
+        and hub_mode == "subscribe"
+        and hmac.compare_digest(hub_verify_token or "", VERIFY_TOKEN)
+    ):
         logger.info("Webhook de WhatsApp verificado correctamente")
-        return Response(content=hub_challenge, media_type="text/plain")
-    logger.warning("Verificacion de webhook fallo: token no coincide")
+        return Response(content=hub_challenge or "", media_type="text/plain")
+    logger.warning("Verificacion de webhook fallo")
     return Response(content="Verification failed", status_code=403)
 
 
 # ---------------------------------------------------------------------------
-# 2) RECEPCION DE MENSAJES
+# 2) FIRMA: comprueba que el mensaje realmente lo mando Meta
+# ---------------------------------------------------------------------------
+def _firma_valida(cuerpo: bytes, firma: str | None) -> bool:
+    if not APP_SECRET or not firma or not firma.startswith("sha256="):
+        return False
+    esperada = hmac.new(APP_SECRET.encode("utf-8"), cuerpo, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(esperada, firma.split("=", 1)[1])
+
+
+# ---------------------------------------------------------------------------
+# 3) RECEPCION DE MENSAJES
 # ---------------------------------------------------------------------------
 @router.post("/webhook")
 async def receive_message(request: Request):
-    body = await request.json()
+    cuerpo = await request.body()
+    if not _firma_valida(cuerpo, request.headers.get("X-Hub-Signature-256")):
+        logger.warning("Mensaje de webhook rechazado: firma invalida o faltante")
+        return Response(content="Invalid signature", status_code=403)
 
     try:
-        entry = body["entry"][0]
-        changes = entry["changes"][0]
-        value = changes["value"]
+        body = json.loads(cuerpo)
+        value = body["entry"][0]["changes"][0]["value"]
 
         if "messages" not in value:
             return {"status": "ignored"}  # ej. confirmaciones de "leido"
@@ -83,54 +130,69 @@ async def receive_message(request: Request):
         if msg_type == "text":
             await handle_text_message(from_number, message["text"]["body"].strip())
         elif msg_type == "location":
-            loc = message["location"]
-            await handle_location_message(from_number, loc["latitude"], loc["longitude"])
-        else:
             await send_whatsapp_message(
                 from_number,
-                "Por ahora puedo leer texto y ubicación compartida. Escribí *ayuda*.",
+                "No guardamos ubicaciones ni las enviamos a nadie.\n\n" + EMERGENCIA_TEXTO,
+            )
+        else:
+            await send_whatsapp_message(
+                from_number, "Por ahora solo puedo leer texto. Escribí *ayuda*."
             )
 
-    except (KeyError, IndexError) as e:
+    except (KeyError, IndexError, ValueError) as e:
         logger.info(f"Payload sin mensaje procesable: {e}")
 
     return {"status": "received"}
 
 
 # ---------------------------------------------------------------------------
-# 3) FORMATEO — mismo criterio que formatear_ciudad/formatear_cuenca de bot.py
-#    pero en markdown de WhatsApp (*negrita*, no HTML)
+# 4) FORMATEO
 # ---------------------------------------------------------------------------
+def _dato_en_vivo(registro: dict) -> bool:
+    """True solo si el dato es medido (conectado) y de las ultimas 48 h."""
+    if not registro.get("conectado"):
+        return False
+    texto = str(registro.get("ultima_verificacion") or "").replace(" UTC", "+00:00").replace(" ", "T")
+    try:
+        fecha = datetime.fromisoformat(texto)
+    except ValueError:
+        return False
+    if fecha.tzinfo is None:
+        fecha = fecha.replace(tzinfo=timezone.utc)
+    horas = (datetime.now(timezone.utc) - fecha).total_seconds() / 3600
+    return horas <= HORAS_MAXIMAS_DATO_VIGENTE
+
+
+def _emoji(datos: dict) -> str:
+    return EMOJI_POR_COLOR.get(datos.get("emoji"), "⚪")
+
+
 def _formatear_localidad(datos: dict, nombre_cuenca: str) -> str:
-    aviso = "" if datos["conectado"] else "\n⚠️ _Dato de demostración, sin conexión automática aún._"
+    nombre = datos["nombre"]
+    if not _dato_en_vivo(datos) or datos.get("nivel_metros") is None:
+        ultima = datos.get("ultima_verificacion") or "sin registro"
+        return (
+            f"⚪ *{nombre}* (cuenca: {nombre_cuenca})\n"
+            "Sin dato en vivo en este momento: no podemos informar el nivel actual.\n"
+            f"Última verificación registrada: {ultima}\n"
+            "Para información oficial consultá a Defensa Civil (103).\n\n"
+            f"{PIE_OFICIAL}"
+        )
     return (
-        f"{datos['emoji']} *{datos['nombre']}* (cuenca: {nombre_cuenca})\n"
+        f"{_emoji(datos)} *{nombre}* (cuenca: {nombre_cuenca})\n"
         f"Nivel: {datos['nivel_metros']} m — Estado: {datos['estado']}\n"
         f"Umbral alerta: {datos['umbral_alerta']} m | evacuación: {datos['umbral_evacuacion']} m\n"
         f"Fuente: {datos['fuente']}\n"
-        f"Última verificación: {datos['ultima_verificacion']}"
-        f"{aviso}"
-    )
-
-
-def _formatear_cuenca(datos: dict) -> str:
-    aviso = "" if datos["conectado"] else "\n⚠️ _Dato de demostración, sin conexión automática aún._"
-    return (
-        f"{datos['emoji']} *{datos['nombre']}* ({datos['estacion']})\n"
-        f"Nivel: {datos['nivel_metros']} m — Estado: {datos['estado']}\n"
-        f"Umbral alerta: {datos['umbral_alerta']} m | evacuación: {datos['umbral_evacuacion']} m\n"
-        f"Fuente: {datos['fuente']}\n"
-        f"Última verificación: {datos['ultima_verificacion']}"
-        f"{aviso}"
+        f"Última verificación: {datos['ultima_verificacion']}\n\n"
+        f"{PIE_OFICIAL}"
     )
 
 
 # ---------------------------------------------------------------------------
-# 4) LOGICA DE COMANDOS DE TEXTO — conectada directo a main.py
+# 5) COMANDOS DE TEXTO
 # ---------------------------------------------------------------------------
 async def handle_text_message(from_number: str, text: str):
-    # Import diferido (no al tope del archivo) para evitar problemas de
-    # import circular con main.py, que es quien importa este modulo.
+    # Import diferido para evitar import circular con main.py.
     from main import (
         CUENCAS,
         localidades,
@@ -143,29 +205,36 @@ async def handle_text_message(from_number: str, text: str):
 
     if comando in ("hola", "ayuda", "menu", "start", "/start"):
         respuesta = (
-            "Hola! Soy el bot del *Portal Hídrico Chaco*.\n\n"
+            "Hola! Soy el bot *informativo* del *Portal Hídrico Chaco*.\n\n"
             "Comandos:\n"
-            "• *cuencas* — resumen de las 4 cuencas\n"
+            "• *cuencas* — resumen de las cuencas\n"
             "• *nivel [localidad]* — ej: nivel barranqueras\n"
             "• *barrios [localidad]* — zonas vulnerables de esa localidad\n"
-            "• *sos* — reportar una emergencia (te pido tu ubicación)\n\n"
-            "También podés compartir tu ubicación en cualquier momento si estás en riesgo."
+            "• *emergencia* — números para pedir ayuda\n\n"
+            f"{PIE_OFICIAL}"
         )
         await send_whatsapp_message(from_number, respuesta)
         return
 
+    if comando in ("emergencia", "sos"):
+        await send_whatsapp_message(from_number, EMERGENCIA_TEXTO)
+        return
+
     if comando == "cuencas":
-        lineas = [
-            f"{c['emoji']} *{c['nombre']}*: {c['nivel_metros']} m ({c['estado']})"
-            for c in (_cuenca_con_estado(clave) for clave in CUENCAS)
-        ]
+        lineas = []
+        for clave in CUENCAS:
+            c = _cuenca_con_estado(clave)
+            if _dato_en_vivo(c) and c.get("nivel_metros") is not None:
+                lineas.append(f"{_emoji(c)} *{c['nombre']}*: {c['nivel_metros']} m ({c['estado']})")
+            else:
+                lineas.append(f"⚪ *{c['nombre']}*: sin dato en vivo")
         await send_whatsapp_message(
-            from_number, "*Estado de las 4 cuencas:*\n\n" + "\n".join(lineas)
+            from_number, "*Estado de las cuencas:*\n\n" + "\n".join(lineas) + f"\n\n{PIE_OFICIAL}"
         )
         return
 
     if comando.startswith("nivel "):
-        clave = comando.replace("nivel ", "").strip().replace(" ", "_")
+        clave = comando.replace("nivel ", "", 1).strip().replace(" ", "_")
         if clave not in localidades:
             await send_whatsapp_message(
                 from_number,
@@ -173,12 +242,13 @@ async def handle_text_message(from_number: str, text: str):
             )
             return
         loc = _localidad_con_estado(clave)
-        nombre_cuenca = CUENCAS[loc["cuenca_clave"]]["nombre"]
+        cuenca_clave = loc.get("cuenca_clave") or ""
+        nombre_cuenca = CUENCAS.get(cuenca_clave, {}).get("nombre", "sin río cercano (lluvia local)")
         await send_whatsapp_message(from_number, _formatear_localidad(loc, nombre_cuenca))
         return
 
     if comando.startswith("barrios"):
-        clave = comando.replace("barrios", "").strip().replace(" ", "_")
+        clave = comando.replace("barrios", "", 1).strip().replace(" ", "_")
         if not clave:
             await send_whatsapp_message(
                 from_number, "Decime de qué localidad. Ej: *barrios barranqueras*"
@@ -194,43 +264,15 @@ async def handle_text_message(from_number: str, text: str):
                 from_number, f"No tengo barrios vulnerables cargados para {padre['nombre']} todavía."
             )
             return
+        marca = _emoji(padre) if _dato_en_vivo(padre) else "⚪"
         texto = f"📍 *Zonas vulnerables en {padre['nombre']}:*\n\n"
-        texto += "\n\n".join(f"{padre['emoji']} *{b['nombre']}*\n{b['motivo']}" for b in barrios)
+        texto += "\n\n".join(f"{marca} *{b['nombre']}*\n{b['motivo']}" for b in barrios)
+        texto += f"\n\n{PIE_OFICIAL}"
         await send_whatsapp_message(from_number, texto)
-        return
-
-    if comando == "sos":
-        await send_whatsapp_message(
-            from_number,
-            "Entendido. Por favor compartí tu ubicación ahora mismo: tocá el clip 📎 > "
-            "Ubicación > Ubicación actual, para que Defensa Civil pueda encontrarte.",
-        )
         return
 
     await send_whatsapp_message(
         from_number, "No entendí ese mensaje. Escribí *ayuda* para ver los comandos disponibles."
-    )
-
-
-# ---------------------------------------------------------------------------
-# 5) UBICACION (SOS)
-# ---------------------------------------------------------------------------
-async def handle_location_message(from_number: str, lat: float, lon: float):
-    reporte = {
-        "telefono": from_number,
-        "latitud": lat,
-        "longitud": lon,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "atendido": False,
-    }
-    with SOS_LOG_PATH.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(reporte, ensure_ascii=False) + "\n")
-    logger.info(f"Reporte SOS recibido: {reporte}")
-
-    await send_whatsapp_message(
-        from_number,
-        "Recibimos tu ubicación, quedó registrada para Defensa Civil. "
-        "Si podés, contanos tu nombre y cuántas personas están con vos.",
     )
 
 
@@ -248,24 +290,8 @@ async def send_whatsapp_message(to_number: str, text: str):
         "type": "text",
         "text": {"body": text},
     }
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=20.0) as client:
         resp = await client.post(GRAPH_API_URL, headers=headers, json=payload)
         if resp.status_code >= 400:
-            logger.error(f"Error enviando mensaje WhatsApp: {resp.status_code} {resp.text}")
+            logger.error(f"Error enviando mensaje WhatsApp: {resp.status_code}")
         return resp
-
-
-# ---------------------------------------------------------------------------
-# 7) LECTURA DE REPORTES SOS (para que el dashboard los pinte en el mapa)
-# ---------------------------------------------------------------------------
-@router.get("/sos-reports")
-async def get_sos_reports():
-    if not SOS_LOG_PATH.exists():
-        return []
-    reportes = []
-    with SOS_LOG_PATH.open("r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                reportes.append(json.loads(line))
-    return reportes
