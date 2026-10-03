@@ -6,15 +6,20 @@ no aparecen cubiertas por ninguna fuente hidrologica (INA/Prefectura).
 Sube al backend del Portal Hidrico Chaco (cuencas-bot) las alertas que
 mencionen la provincia en general, y marca por separado las que nombran
 puntualmente a una localidad pluvial vigilada.
+
+CAMBIO (02/10/2026): el backend exige la clave de escritura en el header
+X-API-Key, que se lee de la variable de entorno API_KEY_SENSORES.
 """
 import os
+import sys
 from datetime import datetime, timezone
 
 import requests
 
 SMN_ALERTS_URL = "https://ws.smn.gob.ar/alerts"
 BACKEND_URL = os.environ.get("PORTAL_BACKEND_URL", "https://cuencas-bot.onrender.com")
-TIMEOUT_SEGUNDOS = 15
+TIMEOUT_FUENTE = 15
+TIMEOUT_BACKEND = 60  # Render gratis puede tardar hasta 1 minuto en despertar
 
 # Localidades sin rio cerca que dependen 100% de avisos de lluvia del SMN,
 # porque ninguna fuente hidrologica (INA/Prefectura) las cubre.
@@ -27,7 +32,7 @@ LOCALIDADES_PLUVIALES = {
 
 
 def obtener_alertas_smn() -> list[dict]:
-    resp = requests.get(SMN_ALERTS_URL, timeout=TIMEOUT_SEGUNDOS)
+    resp = requests.get(SMN_ALERTS_URL, timeout=TIMEOUT_FUENTE)
     resp.raise_for_status()
     datos = resp.json()
     return datos if isinstance(datos, list) else datos.get("alerts", [])
@@ -60,6 +65,12 @@ def normalizar(alerta: dict, localidades_afectadas: list[str]) -> dict:
 
 
 def main() -> None:
+    clave_api = os.environ.get("API_KEY_SENSORES", "")
+    if not clave_api:
+        print("[actualizar_alertas_smn] Falta la variable API_KEY_SENSORES: el backend "
+              "rechazaria las escrituras. No se sube nada.")
+        sys.exit(1)
+
     try:
         alertas_nacionales = obtener_alertas_smn()
     except (requests.RequestException, ValueError) as error:
@@ -80,11 +91,16 @@ def main() -> None:
     }
 
     try:
-        resp = requests.post(f"{BACKEND_URL}/alertas/actualizar", json=payload, timeout=TIMEOUT_SEGUNDOS)
+        resp = requests.post(
+            f"{BACKEND_URL}/alertas/actualizar",
+            json=payload,
+            headers={"X-API-Key": clave_api},
+            timeout=TIMEOUT_BACKEND,
+        )
         resp.raise_for_status()
     except requests.RequestException as error:
         print(f"[actualizar_alertas_smn] Error subiendo al backend: {error}")
-        return
+        sys.exit(1)
 
     con_localidad_pluvial = [a for a in alertas_relevantes if a["localidades_pluviales_afectadas"]]
     print(f"[actualizar_alertas_smn] OK: {len(alertas_relevantes)} alerta(s) de Chaco, "
