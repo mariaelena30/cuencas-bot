@@ -26,12 +26,16 @@ el script debe fallar de forma visible (no debe inventar un numero),
 por eso cada extraccion tiene su propio try/except que loguea el error
 en vez de generar un dato falso.
 
+CAMBIO (02/10/2026): el backend ahora exige la clave de escritura en el
+header X-API-Key, que se lee de la variable de entorno API_KEY_SENSORES.
+
 COMO PROGRAMARLO: GitHub Actions, 1 vez por dia (el INA solo actualiza
 el reporte una vez al dia, no tiene sentido correr esto mas seguido).
 """
 
 import os
 import re
+import sys
 from datetime import datetime, timezone
 
 import requests
@@ -39,7 +43,8 @@ from bs4 import BeautifulSoup
 
 INA_URL = "https://alerta.ina.gob.ar/a5/diario/reporte_diario"
 BACKEND_URL = os.environ.get("PORTAL_BACKEND_URL", "https://cuencas-bot.onrender.com")
-TIMEOUT_SEGUNDOS = 20
+TIMEOUT_FUENTE = 20
+TIMEOUT_BACKEND = 60  # Render gratis puede tardar hasta 1 minuto en despertar
 
 # Estaciones del INA que nos interesan para el Chaco (nombre tal cual
 # aparece en la tabla del reporte diario del INA).
@@ -47,7 +52,7 @@ ESTACIONES_INA_RELEVANTES = ["Barranqueras", "Corrientes"]
 
 
 def obtener_reporte_diario() -> BeautifulSoup:
-    resp = requests.get(INA_URL, timeout=TIMEOUT_SEGUNDOS, headers={"User-Agent": "PortalHidricoChaco/1.0"})
+    resp = requests.get(INA_URL, timeout=TIMEOUT_FUENTE, headers={"User-Agent": "PortalHidricoChaco/1.0"})
     resp.raise_for_status()
     return BeautifulSoup(resp.text, "lxml")
 
@@ -116,6 +121,13 @@ def extraer_pronostico_narrativo(soup: BeautifulSoup) -> str | None:
 
 
 def main() -> None:
+    clave_api = os.environ.get("API_KEY_SENSORES", "")
+    if not clave_api:
+        print("[actualizar_ina] Falta la variable API_KEY_SENSORES: el backend rechazaria "
+              "las escrituras. No se sube nada.")
+        sys.exit(1)
+    encabezados = {"X-API-Key": clave_api}
+
     try:
         soup = obtener_reporte_diario()
     except requests.RequestException as error:
@@ -140,11 +152,16 @@ def main() -> None:
     }
 
     try:
-        resp = requests.post(f"{BACKEND_URL}/ina/actualizar", json=payload, timeout=TIMEOUT_SEGUNDOS)
+        resp = requests.post(
+            f"{BACKEND_URL}/ina/actualizar",
+            json=payload,
+            headers=encabezados,
+            timeout=TIMEOUT_BACKEND,
+        )
         resp.raise_for_status()
     except requests.RequestException as error:
         print(f"[actualizar_ina] Error subiendo al backend: {error}")
-        return
+        sys.exit(1)
 
     # Ademas de guardar el contexto INA por separado, usamos la lectura
     # de Barranqueras para actualizar el NIVEL REAL de esa localidad en
@@ -157,7 +174,8 @@ def main() -> None:
             resp2 = requests.post(
                 f"{BACKEND_URL}/hidrologia/actualizar",
                 json={"localidad": "barranqueras", "nivel_metros": niveles["barranqueras"]["nivel_metros"]},
-                timeout=TIMEOUT_SEGUNDOS,
+                headers=encabezados,
+                timeout=TIMEOUT_BACKEND,
             )
             resp2.raise_for_status()
             print(f"[actualizar_ina] Nivel real de Barranqueras actualizado: {niveles['barranqueras']['nivel_metros']}m")
