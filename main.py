@@ -990,7 +990,8 @@ def suscribir_notificaciones_push(datos: SuscripcionPush):
 
 
 @app.post("/alertas/actualizar")
-def actualizar_alertas_smn(datos: ActualizacionAlertasSMN):
+def actualizar_alertas_smn(datos: ActualizacionAlertasSMN, x_api_key: str | None = Header(default=None)):
+    exigir_clave_escritura(x_api_key)
     ALERTAS_SMN["alertas"] = datos.alertas
     ALERTAS_SMN["cantidad"] = datos.cantidad
     ALERTAS_SMN["ultima_verificacion"] = (
