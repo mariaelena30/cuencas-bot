@@ -965,7 +965,8 @@ def obtener_datos_ina():
 
 
 @app.post("/ina/actualizar")
-def actualizar_datos_ina(datos: ActualizacionINA):
+def actualizar_datos_ina(datos: ActualizacionINA, x_api_key: str | None = Header(default=None)):
+    exigir_clave_escritura(x_api_key)
     DATOS_INA["fuente"] = datos.fuente
     DATOS_INA["url_original"] = datos.url_original
     DATOS_INA["fecha_actualizacion_ina"] = datos.fecha_actualizacion_ina
@@ -975,7 +976,6 @@ def actualizar_datos_ina(datos: ActualizacionINA):
         datos.consultado_en or datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     )
     return {"ok": True, "ina": DATOS_INA}
-
 
 @app.post("/notificaciones/suscribir")
 def suscribir_notificaciones_push(datos: SuscripcionPush):
