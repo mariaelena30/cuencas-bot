@@ -25,4 +25,5 @@ jobs:
 
       - name: Correr el actualizador de NDVI
         run: python actualizar_ndvi.py
-
+        env:
+          API_KEY_SENSORES: ${{ secrets.API_KEY_SENSORES }}
