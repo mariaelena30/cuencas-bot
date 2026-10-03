@@ -17,6 +17,7 @@ Fuente: NOAA Climate Prediction Center
         https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt
 """
 
+import os
 import sys
 from datetime import datetime, timezone
 
