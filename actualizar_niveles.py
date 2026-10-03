@@ -52,21 +52,16 @@ TIMEOUT = 60.0  # Render gratis puede tardar hasta 1 minuto en despertar
 # "exacto": True  = la estacion es literalmente esa localidad
 # "exacto": False = estacion mas cercana del mismo tramo, aproximacion
 # ---------------------------------------------------------------------
-MAPEO_ESTACIONES = {
+MAPEO_PUERTO_A_LOCALIDAD = {
     "Barranqueras": [
-        {"localidad": "barranqueras", "exacto": True},
-        {"localidad": "resistencia", "exacto": False},
-        {"localidad": "puerto_vilelas", "exacto": False},
-    ],
-    "Isla del Cerrito": [
-        {"localidad": "isla_del_cerrito", "exacto": True},
+        "barranqueras",
+        "resistencia",
+        "puerto_vilelas",
     ],
     "Bermejo": [
-        {"localidad": "puerto_bermejo", "exacto": False},
+        "puerto_bermejo",
     ],
-    "Las Palmas": [
-        {"localidad": "la_leonesa", "exacto": False},
-    ],
+}
 }
 
 # Localidades que sabemos de antemano que esta fuente NO cubre.
