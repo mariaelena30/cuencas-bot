@@ -24,3 +24,5 @@ jobs:
 
       - name: Correr el actualizador de ONI
         run: python actualizar_oni.py
+        env:
+          API_KEY_SENSORES: ${{ secrets.API_KEY_SENSORES }}
