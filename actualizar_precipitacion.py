@@ -3,16 +3,22 @@ Actualizador de precipitacion acumulada - Portal Hidrico Chaco.
 
 Usa la API gratuita de Open-Meteo (sin necesidad de token/cuenta) para
 obtener la lluvia acumulada de las ultimas 24 horas en cada localidad,
-segun sus coordenadas, y la sube al backend via su endpoint POST.
+segun sus coordenadas, y la sube al backend.
 
 Fuente: Open-Meteo (https://open-meteo.com), modelos ECMWF/GFS/ICON
 combinados ("best_match"). Es un dato de pronostico/reanalisis
-meteorologico, no una medicion de pluviometro en el lugar exacto -
-se aclara esto en el backend para no dar una falsa sensacion de
-precision quirurgica.
+meteorologico, no una medicion de pluviometro en el lugar exacto.
+
+CAMBIO (02/10/2026): ya NO se reenvia el nivel del rio. Antes este
+script leia el nivel actual de cada localidad y lo volvia a mandar, lo
+que convertia valores de DEMOSTRACION en lecturas "medidas ahora". Ahora
+usa un endpoint propio (/precipitacion/actualizar) que solo toca la
+lluvia. La clave se lee de la variable de entorno API_KEY_SENSORES.
 """
 
+import os
 import sys
+import time
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -21,14 +27,12 @@ import requests
 TZ_CHACO = ZoneInfo("America/Argentina/Buenos_Aires")
 
 BACKEND_URL = "https://cuencas-bot.onrender.com"
-TIMEOUT = 35.0
+TIMEOUT = 60.0  # Render gratis puede tardar hasta 1 minuto en despertar
 
-# Mismas coordenadas que ya usa el dashboard (panel_de_aplicacion.py)
+# Coordenadas del centro de cada localidad (dato geografico, no hidrologico)
 COORDENADAS = {
     "resistencia": (-27.4511, -58.9866),
     "barranqueras": (-27.4815, -58.9324),
-    "corrientes": (-27.4698, -58.8306),
-    "formosa": (-26.1775, -58.1781),
     "puerto_bermejo": (-26.8667, -58.6333),
     "el_sauzalito": (-24.4236, -61.6842),
     "isla_del_cerrito": (-27.3667, -58.6333),
@@ -37,6 +41,12 @@ COORDENADAS = {
     "pampa_del_indio": (-25.9167, -59.9333),
     "villa_rio_bermejito": (-25.6167, -60.1667),
     "fuerte_esperanza": (-24.5333, -61.7500),
+    "san_martin_chaco": (-26.5375, -59.3417),
+    "santa_sylvina": (-27.7830, -61.1500),
+    "charata": (-27.2180, -61.1874),
+    "quitilipi": (-26.8700, -60.2200),
+    "castelli": (-25.9500, -60.6170),
+    "presidencia_de_la_plaza": (-26.9986, -59.8466),
 }
 
 
@@ -49,8 +59,6 @@ def obtener_precipitacion_24h(lat: float, lon: float, intentos: int = 3) -> floa
     Reintenta hasta 3 veces si hay un timeout o error de red pasajero,
     con una breve espera entre intentos, antes de darse por vencido.
     """
-    import time
-
     params = {
         "latitude": lat,
         "longitude": lon,
@@ -99,21 +107,16 @@ def obtener_precipitacion_24h(lat: float, lon: float, intentos: int = 3) -> floa
 
 
 def actualizar_backend(localidad: str, precipitacion_mm: float) -> bool:
+    clave_api = os.environ.get("API_KEY_SENSORES", "")
     try:
-        # Se manda tambien el nivel_metros actual para no pisarlo con
-        # un valor viejo: primero lo leemos, despues actualizamos solo
-        # la precipitacion.
-        r_actual = requests.get(f"{BACKEND_URL}/localidades/{localidad}", timeout=TIMEOUT)
-        r_actual.raise_for_status()
-        nivel_actual = r_actual.json()["localidad"]["nivel_metros"]
-
         r = requests.post(
-            f"{BACKEND_URL}/hidrologia/actualizar",
+            f"{BACKEND_URL}/precipitacion/actualizar",
             json={
                 "localidad": localidad,
-                "nivel_metros": nivel_actual,
                 "precipitacion_acumulada_mm": precipitacion_mm,
+                "fuente": "Open-Meteo (modelo meteorologico, no pluviometro)",
             },
+            headers={"X-API-Key": clave_api},
             timeout=TIMEOUT,
         )
         r.raise_for_status()
@@ -126,6 +129,11 @@ def actualizar_backend(localidad: str, precipitacion_mm: float) -> bool:
 def main():
     print(f"=== Actualizador de precipitacion - {datetime.now(timezone.utc).isoformat()} ===")
     print(f"Backend: {BACKEND_URL}\n")
+
+    if not os.environ.get("API_KEY_SENSORES"):
+        print("[ERROR FATAL] Falta la variable de entorno API_KEY_SENSORES. "
+              "Sin ella el backend rechaza las escrituras.")
+        sys.exit(1)
 
     actualizadas, fallidas = [], []
 
@@ -144,8 +152,8 @@ def main():
     print(f"\nResumen: {len(actualizadas)} actualizadas OK, {len(fallidas)} con error.")
     if fallidas:
         print("Fallidas:", fallidas)
-    if fallidas:
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
