@@ -69,6 +69,34 @@ def guardar_estado(clave: str, datos: dict) -> None:
 
 
 # ---------------------------------------------------------------------
+# HISTORICO DE NIVELES (agregado 02/10/2026)
+#
+# Un documento por localidad con una lectura por dia (la ultima del
+# dia). Leer el historico cuesta 1 sola lectura de Firestore.
+# ---------------------------------------------------------------------
+COLECCION_HISTORICO = "historico_niveles"
+MAX_LECTURAS_HISTORICO = 90
+
+
+def guardar_lectura_historica(clave: str, nivel_metros: float, momento_iso: str) -> None:
+    ref = get_db().collection(COLECCION_HISTORICO).document(clave)
+    doc = ref.get()
+    lecturas = (doc.to_dict() or {}).get("lecturas", []) if doc.exists else []
+    dia = momento_iso[:10]
+    lecturas = [l for l in lecturas if str(l.get("fecha", ""))[:10] != dia]
+    lecturas.append({"fecha": momento_iso, "altura_m": nivel_metros})
+    lecturas.sort(key=lambda l: l["fecha"])
+    ref.set({"lecturas": lecturas[-MAX_LECTURAS_HISTORICO:]})
+
+
+def leer_historico(clave: str) -> list:
+    doc = get_db().collection(COLECCION_HISTORICO).document(clave).get()
+    if not doc.exists:
+        return []
+    return (doc.to_dict() or {}).get("lecturas", [])
+
+
+# ---------------------------------------------------------------------
 # NOTIFICACIONES PUSH (Firebase Cloud Messaging) - agregado 05/09/2026
 #
 # Guarda que celular/navegador quiere recibir alertas de que localidad,
@@ -155,32 +183,3 @@ def enviar_push_localidad(localidad: str, titulo: str, cuerpo: str, urgente: boo
                 desactivar_token(tokens[idx])
 
     return {"enviados": respuesta.success_count, "fallidos": respuesta.failure_count}
-   
-
-# ---------------------------------------------------------------------
-# HISTORICO DE NIVELES (agregado 02/10/2026)
-#
-# Un documento por localidad con una lectura por dia (la ultima del
-# dia). Leer el historico cuesta 1 sola lectura de Firestore.
-# ---------------------------------------------------------------------
-COLECCION_HISTORICO = "historico_niveles"
-MAX_LECTURAS_HISTORICO = 90
-
-
-def guardar_lectura_historica(clave: str, nivel_metros: float, momento_iso: str) -> None:
-    ref = get_db().collection(COLECCION_HISTORICO).document(clave)
-    doc = ref.get()
-    lecturas = (doc.to_dict() or {}).get("lecturas", []) if doc.exists else []
-    dia = momento_iso[:10]
-    lecturas = [l for l in lecturas if str(l.get("fecha", ""))[:10] != dia]
-    lecturas.append({"fecha": momento_iso, "altura_m": nivel_metros})
-    lecturas.sort(key=lambda l: l["fecha"])
-    ref.set({"lecturas": lecturas[-MAX_LECTURAS_HISTORICO:]})
-
-
-def leer_historico(clave: str) -> list:
-    doc = get_db().collection(COLECCION_HISTORICO).document(clave).get()
-    if not doc.exists:
-        return []
-    return (doc.to_dict() or {}).get("lecturas", [])
-
