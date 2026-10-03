@@ -61,11 +61,13 @@ def obtener_ultimo_oni() -> tuple[str, float]:
 
 
 def actualizar_backend(fase: str, valor: float) -> bool:
+    clave_api = os.environ.get("API_KEY_SENSORES", "")
     try:
         r = requests.post(
             f"{BACKEND_URL}/clima/actualizar",
             json={"fase_oni": fase, "ultimo_valor_oni": valor},
-            timeout=TIMEOUT,
+            headers={"X-API-Key": clave_api},
+            timeout=60.0,
         )
         r.raise_for_status()
         return True
