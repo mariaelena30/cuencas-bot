@@ -183,6 +183,26 @@ def guardar_fase(clave: str, fase: str):
 # ---------------------------------------------------------------------
 # LOOP PRINCIPAL
 # ---------------------------------------------------------------------
+HORAS_MAXIMAS_DATO_VIGENTE = 48
+
+
+def _dato_en_vivo(loc: dict) -> bool:
+    """Solo se avisa por datos medidos y recientes, nunca por valores de demostracion."""
+    from datetime import datetime, timezone
+
+    if not loc.get("conectado"):
+        return False
+    texto = str(loc.get("ultima_verificacion") or "").replace(" UTC", "+00:00").replace(" ", "T")
+    try:
+        fecha = datetime.fromisoformat(texto)
+    except ValueError:
+        return False
+    if fecha.tzinfo is None:
+        fecha = fecha.replace(tzinfo=timezone.utc)
+    horas = (datetime.now(timezone.utc) - fecha).total_seconds() / 3600
+    return horas <= HORAS_MAXIMAS_DATO_VIGENTE
+
+
 async def revisar_y_despachar():
     # Imports diferidos: este script puede correr como job separado
     # (GitHub Actions) sin levantar todo FastAPI.
@@ -191,13 +211,15 @@ async def revisar_y_despachar():
     estado_previo = cargar_estado_previo()
 
     async with httpx.AsyncClient() as client:
-        resp = await client.get(f"{BACKEND_URL}/localidades", timeout=15)
+        resp = await client.get(f"{BACKEND_URL}/localidades", timeout=60)
         localidades = resp.json()["localidades"]
 
         for clave, loc in localidades.items():
             fase_nueva = loc["estado"]
             if fase_nueva == "SIN_DATO":
                 continue
+            if not _dato_en_vivo(loc):
+                continue  # dato de demostracion o desactualizado: no se avisa a nadie
 
             fase_anterior = estado_previo.get(clave)
             if fase_nueva == fase_anterior:
@@ -243,7 +265,6 @@ async def revisar_y_despachar():
                     logger.exception(f"No se pudo mandar push para {clave}")
 
             guardar_fase(clave, fase_nueva)
-
 
 if __name__ == "__main__":
     import asyncio
