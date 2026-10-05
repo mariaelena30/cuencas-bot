@@ -27,12 +27,20 @@ header X-API-Key. Se lee de la variable de entorno API_KEY_SENSORES
 (la MISMA que esta cargada en Render). Nunca escribir la clave en este
 archivo.
 
+NOTA (05/10/2026): se agrego (1) despertar el backend antes de enviar
+datos (Render gratis se duerme), (2) reintentos al leer la fuente y al
+enviar cada lectura, y (3) se corrigieron los indices de columna de
+Alerta/Evacuacion (la tabla tiene: Puerto, Rio, Altura, Variacion,
+Cambio, Alt. Ant, Alerta, Evacuacion, Historico). La fuente informa
+"cada 24 horas", asi que correr mas seguido que cada hora no aporta.
+
 Fuente: Prefectura Naval Argentina, via CIM-UNL
         https://fich.unl.edu.ar/cim/rios/parana/alturas
 """
 
 import os
 import sys
+import time
 from datetime import datetime, timezone
 
 import requests
@@ -69,6 +77,11 @@ SIN_FUENTE_DISPONIBLE = [
     "el_sauzalito", "pampa_del_indio", "villa_rio_bermejito", "fuerte_esperanza",
 ]
 
+# Posicion de cada columna en la tabla de la fuente
+COL_ALTURA = 2
+COL_ALERTA = 6
+COL_EVACUACION = 7
+
 
 def _a_float(texto: str):
     """Convierte '6,31' -> 6.31. Devuelve None si no es un numero valido."""
@@ -81,13 +94,42 @@ def _a_float(texto: str):
         return None
 
 
+def despertar_backend() -> bool:
+    """Render (plan gratis) se duerme por inactividad y tarda en arrancar.
+    Le pegamos a la raiz hasta que responda, antes de mandar datos."""
+    for intento in range(1, 7):
+        try:
+            r = requests.get(f"{BACKEND_URL}/", timeout=TIMEOUT)
+            if r.status_code == 200:
+                print(f"Backend despierto (intento {intento}).")
+                return True
+        except requests.RequestException as e:
+            print(f"  Backend aun no responde (intento {intento}/6): {e}")
+        time.sleep(10)
+    print("[AVISO] El backend no respondio al despertarlo; se intenta enviar igual.")
+    return False
+
+
 def obtener_datos_estaciones() -> dict:
     """
     Descarga y parsea la tabla de alturas. Devuelve un dict:
-    { "Barranqueras": {"altura": 3.10, "alerta": 6.00, "evacuacion": 6.50}, ... }
+    { "Barranqueras": {"altura": 4.16, "alerta": 6.00, "evacuacion": 6.50}, ... }
     """
-    resp = requests.get(URL_FUENTE, timeout=TIMEOUT, headers={"User-Agent": "Mozilla/5.0"})
-    resp.raise_for_status()
+    resp = None
+    ultimo_error = None
+    for intento in range(1, 4):
+        try:
+            resp = requests.get(URL_FUENTE, timeout=TIMEOUT, headers={"User-Agent": "Mozilla/5.0"})
+            resp.raise_for_status()
+            break
+        except requests.RequestException as e:
+            ultimo_error = e
+            print(f"  Fuente no respondio (intento {intento}/3): {e}")
+            resp = None
+            time.sleep(10)
+    if resp is None:
+        raise RuntimeError(f"No se pudo descargar la fuente: {ultimo_error}")
+
     soup = BeautifulSoup(resp.text, "lxml")
 
     tabla = soup.find("table")
@@ -104,9 +146,9 @@ def obtener_datos_estaciones() -> dict:
         nombre_estacion = celdas[0]
         if nombre_estacion not in MAPEO_ESTACIONES:
             continue  # no nos interesa esta fila
-        altura = _a_float(celdas[2])
-        alerta = _a_float(celdas[5]) if len(celdas) > 5 else None
-        evacuacion = _a_float(celdas[6]) if len(celdas) > 6 else None
+        altura = _a_float(celdas[COL_ALTURA])
+        alerta = _a_float(celdas[COL_ALERTA]) if len(celdas) > COL_ALERTA else None
+        evacuacion = _a_float(celdas[COL_EVACUACION]) if len(celdas) > COL_EVACUACION else None
         if altura is None:
             continue  # "sin datos" ese dia, no actualizamos con basura
         resultado[nombre_estacion] = {
@@ -117,20 +159,23 @@ def obtener_datos_estaciones() -> dict:
     return resultado
 
 
-def actualizar_backend(localidad: str, nivel_metros: float) -> bool:
+def actualizar_backend(localidad: str, nivel_metros: float, intentos: int = 3) -> bool:
     clave_api = os.environ.get("API_KEY_SENSORES", "")
-    try:
-        r = requests.post(
-            f"{BACKEND_URL}/hidrologia/actualizar",
-            json={"localidad": localidad, "nivel_metros": nivel_metros},
-            headers={"X-API-Key": clave_api},
-            timeout=TIMEOUT,
-        )
-        r.raise_for_status()
-        return True
-    except Exception as e:
-        print(f"  [ERROR] No se pudo actualizar {localidad}: {e}")
-        return False
+    for intento in range(1, intentos + 1):
+        try:
+            r = requests.post(
+                f"{BACKEND_URL}/hidrologia/actualizar",
+                json={"localidad": localidad, "nivel_metros": nivel_metros},
+                headers={"X-API-Key": clave_api},
+                timeout=TIMEOUT,
+            )
+            r.raise_for_status()
+            return True
+        except Exception as e:
+            print(f"  [ERROR] {localidad}, intento {intento}/{intentos}: {e}")
+            if intento < intentos:
+                time.sleep(15)
+    return False
 
 
 def main():
@@ -142,6 +187,8 @@ def main():
         print("[ERROR FATAL] Falta la variable de entorno API_KEY_SENSORES. "
               "Sin ella el backend rechaza las escrituras.")
         sys.exit(1)
+
+    despertar_backend()
 
     try:
         datos = obtener_datos_estaciones()
