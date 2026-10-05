@@ -24,6 +24,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import httpx
 
 import firestore_db
 
@@ -1162,3 +1163,34 @@ def listar_precipitacion():
 
 from whatsapp_webhook import router as whatsapp_router
 app.include_router(whatsapp_router)
+
+from whatsapp_webhook import router as whatsapp_router
+app.include_router(whatsapp_router)
+
+@app.get("/pronastico/buscar")
+async def buscar_lugar(q: str):
+    if len(q.strip()) < 2:
+        return {"resultados": []}
+    async with httpx.AsyncClient(timeout=10) as c:
+        r = await c.get(
+            "https://open-meteo.com",
+            params={"name": q, "count": 5, "language": "es", "countryCode": "AR"},
+        )
+    datos = r.json().get("results", [])
+    return {"resultados": [
+        {
+            "nombre": d["name"], 
+            "provincia": d.get("admin1"),
+            "lat": d["latitude"], 
+            "lon": d["longitude"]
+        }
+        for d in datos
+    ]}
+
+@app.get("/pronastico")
+async def pronostico(lat: float, lon: float):
+    async with httpx.AsyncClient(timeout=10) as c:
+        r = await c.get(
+            f"https://open-meteo.com{lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto"
+        )
+    return r.json()
