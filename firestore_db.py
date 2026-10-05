@@ -26,7 +26,7 @@ CONFIGURACION NECESARIA (una sola vez, no hace falta repetirla):
 """
 import json
 import os
-
+import time
 import firebase_admin
 from firebase_admin import credentials, firestore
 
@@ -55,18 +55,31 @@ def get_db():
     return _db
 
 
+
+
+_CACHE_ESTADO: dict = {}
+SEGUNDOS_CACHE_ESTADO = 60
+
+
 def leer_estado(clave: str) -> dict | None:
     """Trae el ultimo estado real guardado de una localidad, o None si
-    todavia no se guardo nunca (localidad nueva / primer arranque)."""
+    todavia no se guardo nunca. Se guarda 60 s en memoria para no gastar
+    la cuota de lecturas de Firestore cuando entra mucha gente."""
+    ahora = time.time()
+    guardado = _CACHE_ESTADO.get(clave)
+    if guardado and ahora - guardado[0] < SEGUNDOS_CACHE_ESTADO:
+        return guardado[1]
     doc = get_db().collection(COLECCION).document(clave).get()
-    return doc.to_dict() if doc.exists else None
+    datos = doc.to_dict() if doc.exists else None
+    _CACHE_ESTADO[clave] = (ahora, datos)
+    return datos
 
 
 def guardar_estado(clave: str, datos: dict) -> None:
     """Guarda/actualiza el estado de una localidad.
     merge=True para no borrar campos que no se esten tocando ahora."""
     get_db().collection(COLECCION).document(clave).set(datos, merge=True)
-
+    _CACHE_ESTADO.pop(clave, None)
 
 # ---------------------------------------------------------------------
 # HISTORICO DE NIVELES (agregado 02/10/2026)
