@@ -527,16 +527,19 @@ class LecturaSensorIoT(BaseModel):
     bateria_pct: float | None = None
 
 
-API_KEY_SENSORES = os.environ.get("API_KEY_SENSORES")
+API_KEY_SENSORES = (os.environ.get("API_KEY_SENSORES") or "").strip() or None
 
 
 def exigir_clave_escritura(x_api_key: str | None) -> None:
     """Rechaza el pedido si no trae la clave correcta. Si la variable de
     entorno no esta configurada, rechaza todo (falla cerrado)."""
+    clave_recibida = (x_api_key or "").strip()
     if (
         not API_KEY_SENSORES
-        or not x_api_key
-        or not hmac.compare_digest(x_api_key, API_KEY_SENSORES)
+        or not clave_recibida
+        or not hmac.compare_digest(
+            clave_recibida.encode("utf-8"), API_KEY_SENSORES.encode("utf-8")
+        )
     ):
         raise HTTPException(status_code=401, detail="Clave de escritura invalida o faltante.")
 
@@ -769,8 +772,15 @@ def calcular_riesgo_pluvial(clave: str) -> dict:
 
 
 @app.get("/riesgo-pluvial/{clave}")
-def obtener_riesgo_pluvial(clave: str):
-    return calcular_riesgo_pluvial(clave.lower())
+def calcular_riesgo_pluvial(clave: str) -> dict:
+    return {
+        "riesgo": "SIN_DATO",
+        "detalle": "Desactivado: faltan umbrales de lluvia validados por la UNNE.",
+        "metodo": "desactivado",
+    }
+
+
+def _calcular_riesgo_pluvial_anterior(clave: str) -> dict:
 
 
 @app.get("/riesgo-pluvial")
@@ -1129,7 +1139,23 @@ def listar_reportes_ciudadanos():
         )
         return {"reportes": resultado.data}
     return {"reportes": reportes_ciudadanos}
-
+@app.get("/precipitacion")
+def listar_precipitacion():
+    """Lluvia de las ultimas 24 h por localidad. Solo se informa un valor si
+    lo cargo el actualizador (Open-Meteo): los numeros de ejemplo del codigo
+    NO se devuelven como si fueran mediciones."""
+    resultado = {}
+    for clave in localidades:
+        loc = _localidad_con_estado(clave)
+        medida = loc.get("precipitacion_verificacion")
+        resultado[clave] = {
+            "nombre": loc["nombre"],
+            "tipo_inundacion_dominante": loc.get("tipo_inundacion_dominante"),
+            "precipitacion_mm_24h": loc.get("precipitacion_acumulada_mm") if medida else None,
+            "fuente": loc.get("precipitacion_fuente") if medida else None,
+            "verificacion": medida,
+        }
+    return {"precipitacion": resultado}
 
 from whatsapp_webhook import router as whatsapp_router
 app.include_router(whatsapp_router)
