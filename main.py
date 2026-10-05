@@ -21,10 +21,10 @@ import json
 import os
 from datetime import datetime, timedelta, timezone
 
+import httpx
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import httpx
 
 import firestore_db
 
@@ -53,6 +53,8 @@ ORIGENES_PERMITIDOS = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ORIGENES_PERMITIDOS,
+    # Deploys de vista previa de Vercel de la cuenta malena5 (solo para pruebas)
+    allow_origin_regex=r"https://monitoreo-[a-z0-9]+-malena5\.vercel\.app",
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type", "X-API-Key"],
@@ -528,6 +530,12 @@ class LecturaSensorIoT(BaseModel):
     bateria_pct: float | None = None
 
 
+class ActualizacionPrecipitacion(BaseModel):
+    localidad: str
+    precipitacion_acumulada_mm: float
+    fuente: str | None = None
+
+
 API_KEY_SENSORES = (os.environ.get("API_KEY_SENSORES") or "").strip() or None
 
 
@@ -711,7 +719,16 @@ def recibir_lectura_sensor(clave: str, datos: LecturaSensorIoT, x_api_key: str |
     }
 
 
-def calcular_riesgo_pluvial(clave: str) -> dict:
+# -----------------------------------------------------------------------
+# RIESGO PLUVIAL
+# El calculo original se conserva abajo (_calcular_riesgo_pluvial_anterior)
+# pero el endpoint publico esta DESACTIVADO hasta tener umbrales de lluvia
+# validados por la UNNE.
+# -----------------------------------------------------------------------
+reportes_ciudadanos: list = []
+
+
+def _calcular_riesgo_pluvial_anterior(clave: str) -> dict:
     loc = localidades.get(clave)
     if loc is None:
         return {"riesgo": "SIN_DATO", "detalle": "localidad no encontrada"}
@@ -772,26 +789,20 @@ def calcular_riesgo_pluvial(clave: str) -> dict:
     }
 
 
-def calcular_riesgo_pluvial(clave: str) -> dict:
-    loc = localidades.get(clave)
-    ...  # (toda la lógica con puntaje, reportes, etc.)
-
-
 @app.get("/riesgo-pluvial/{clave}")
-def calcular_riesgo_pluvial(clave: str) -> dict:
+def obtener_riesgo_pluvial(clave: str) -> dict:
     return {
         "riesgo": "SIN_DATO",
-        ...
+        "detalle": "Desactivado: faltan umbrales de lluvia validados por la UNNE.",
+        "metodo": "desactivado",
     }
-
-
-def _calcular_riesgo_pluvial_anterior(clave: str) -> dict:
 
 
 @app.get("/riesgo-pluvial")
 def listar_riesgo_pluvial():
-    pluviales = [...]
-    return {clave: calcular_riesgo_pluvial(clave) for clave in pluviales}
+    pluviales = [c for c, l in localidades.items() if l.get("tipo_inundacion_dominante") == "pluvial"]
+    return {clave: obtener_riesgo_pluvial(clave) for clave in pluviales}
+
 
 @app.get("/cuencas")
 def listar_cuencas():
@@ -906,7 +917,10 @@ def actualizar_hidrologia(datos: ActualizacionHidrologia, x_api_key: str | None 
 
     try:
         firestore_db.guardar_estado(clave, nuevo_estado)
-    except Exception:
+    except Exception as e:
+        # Si Firestore falla, el dato queda solo en memoria y se pierde
+        # cuando Render se duerme. Dejamos constancia en los logs.
+        print(f"[AVISO] Firestore fallo al guardar estado de {clave}: {e}")
         localidades[clave].update(nuevo_estado)
 
     try:
@@ -915,17 +929,6 @@ def actualizar_hidrologia(datos: ActualizacionHidrologia, x_api_key: str | None 
         print(f"No se pudo guardar el historico de {clave}: {e}")
 
     return {"ok": True, "localidad": _localidad_con_estado(clave)}
-
-class ActualizacionPrecipitacion(BaseModel):
-    localidad: str
-    precipitacion_acumulada_mm: float
-    fuente: str | None = None
-
-
-class ActualizacionPrecipitacion(BaseModel):
-    localidad: str
-    precipitacion_acumulada_mm: float
-    fuente: str | None = None
 
 
 @app.post("/precipitacion/actualizar")
@@ -945,7 +948,8 @@ def actualizar_precipitacion(datos: ActualizacionPrecipitacion, x_api_key: str |
     }
     try:
         firestore_db.guardar_estado(clave, nuevo)
-    except Exception:
+    except Exception as e:
+        print(f"[AVISO] Firestore fallo al guardar precipitacion de {clave}: {e}")
         localidades[clave].update(nuevo)
 
     return {"ok": True, "localidad": _localidad_con_estado(clave)}
@@ -1028,7 +1032,6 @@ def actualizar_alertas_smn(datos: ActualizacionAlertasSMN, x_api_key: str | None
 
 
 tickets_sos: list = []
-reportes_ciudadanos: list = []
 
 
 class SolicitudSOS(BaseModel):
@@ -1143,6 +1146,8 @@ def listar_reportes_ciudadanos():
         )
         return {"reportes": resultado.data}
     return {"reportes": reportes_ciudadanos}
+
+
 @app.get("/precipitacion")
 def listar_precipitacion():
     """Lluvia de las ultimas 24 h por localidad. Solo se informa un valor si
@@ -1161,36 +1166,70 @@ def listar_precipitacion():
         }
     return {"precipitacion": resultado}
 
-from whatsapp_webhook import router as whatsapp_router
-app.include_router(whatsapp_router)
 
-from whatsapp_webhook import router as whatsapp_router
-app.include_router(whatsapp_router)
-
-@app.get("/pronastico/buscar")
+# -----------------------------------------------------------------------
+# PRONOSTICO DE LLUVIA POR LUGAR (Open-Meteo)
+# Lo usa el componente PronosticoLluvia.tsx del portal.
+# -----------------------------------------------------------------------
+@app.get("/pronostico/buscar")
 async def buscar_lugar(q: str):
     if len(q.strip()) < 2:
         return {"resultados": []}
-    async with httpx.AsyncClient(timeout=10) as c:
-        r = await c.get(
-            "https://open-meteo.com",
-            params={"name": q, "count": 5, "language": "es", "countryCode": "AR"},
-        )
+    try:
+        async with httpx.AsyncClient(timeout=10) as c:
+            r = await c.get(
+                "https://geocoding-api.open-meteo.com/v1/search",
+                params={"name": q.strip(), "count": 6, "language": "es", "countryCode": "AR"},
+            )
+            r.raise_for_status()
+    except httpx.HTTPError:
+        raise HTTPException(status_code=502, detail="No se pudo consultar el buscador de lugares.")
     datos = r.json().get("results", [])
-    return {"resultados": [
-        {
-            "nombre": d["name"], 
-            "provincia": d.get("admin1"),
-            "lat": d["latitude"], 
-            "lon": d["longitude"]
-        }
-        for d in datos
-    ]}
+    return {
+        "resultados": [
+            {
+                "nombre": d["name"],
+                "provincia": d.get("admin1"),
+                "lat": d["latitude"],
+                "lon": d["longitude"],
+            }
+            for d in datos
+        ]
+    }
 
-@app.get("/pronastico")
+
+@app.get("/pronostico")
 async def pronostico(lat: float, lon: float):
-    async with httpx.AsyncClient(timeout=10) as c:
-        r = await c.get(
-            f"https://open-meteo.com{lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto"
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        raise HTTPException(status_code=422, detail="Coordenadas fuera de rango.")
+    try:
+        async with httpx.AsyncClient(timeout=10) as c:
+            r = await c.get(
+                "https://api.open-meteo.com/v1/forecast",
+                params={
+                    "latitude": lat,
+                    "longitude": lon,
+                    "daily": "precipitation_sum,precipitation_probability_max",
+                    "timezone": "America/Argentina/Buenos_Aires",
+                    "forecast_days": 7,
+                },
+            )
+            r.raise_for_status()
+    except httpx.HTTPError:
+        raise HTTPException(status_code=502, detail="No se pudo consultar el pronóstico.")
+    d = r.json().get("daily", {})
+    dias = [
+        {"fecha": f, "lluvia_mm": mm, "probabilidad": p}
+        for f, mm, p in zip(
+            d.get("time", []),
+            d.get("precipitation_sum", []),
+            d.get("precipitation_probability_max", []),
         )
-    return r.json()
+    ]
+    return {"dias": dias, "fuente": "Open-Meteo (modelo meteorológico)"}
+
+
+# Siempre al final: el router de WhatsApp
+from whatsapp_webhook import router as whatsapp_router  # noqa: E402
+
+app.include_router(whatsapp_router)
