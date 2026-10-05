@@ -771,12 +771,16 @@ def calcular_riesgo_pluvial(clave: str) -> dict:
     }
 
 
+def calcular_riesgo_pluvial(clave: str) -> dict:
+    loc = localidades.get(clave)
+    ...  # (toda la lógica con puntaje, reportes, etc.)
+
+
 @app.get("/riesgo-pluvial/{clave}")
 def calcular_riesgo_pluvial(clave: str) -> dict:
     return {
         "riesgo": "SIN_DATO",
-        "detalle": "Desactivado: faltan umbrales de lluvia validados por la UNNE.",
-        "metodo": "desactivado",
+        ...
     }
 
 
@@ -785,9 +789,8 @@ def _calcular_riesgo_pluvial_anterior(clave: str) -> dict:
 
 @app.get("/riesgo-pluvial")
 def listar_riesgo_pluvial():
-    pluviales = [c for c, l in localidades.items() if l.get("tipo_inundacion_dominante") == "pluvial"]
+    pluviales = [...]
     return {clave: calcular_riesgo_pluvial(clave) for clave in pluviales}
-
 
 @app.get("/cuencas")
 def listar_cuencas():
