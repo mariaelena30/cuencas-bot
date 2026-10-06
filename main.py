@@ -1198,6 +1198,11 @@ async def buscar_lugar(q: str):
     }
 
 
+def _valor_dia(daily: dict, nombre: str, k: int):
+    lista = daily.get(nombre) or []
+    return lista[k] if k < len(lista) else None
+
+
 @app.get("/pronostico")
 async def pronostico(lat: float, lon: float):
     if not (-90 <= lat <= 90 and -180 <= lon <= 180):
@@ -1209,24 +1214,66 @@ async def pronostico(lat: float, lon: float):
                 params={
                     "latitude": lat,
                     "longitude": lon,
-                    "daily": "precipitation_sum,precipitation_probability_max",
+                    "current": (
+                        "temperature_2m,apparent_temperature,relative_humidity_2m,"
+                        "wind_speed_10m,weather_code"
+                    ),
+                    "hourly": "precipitation",
+                    "daily": (
+                        "weather_code,temperature_2m_max,temperature_2m_min,"
+                        "precipitation_sum,precipitation_probability_max"
+                    ),
                     "timezone": "America/Argentina/Buenos_Aires",
+                    "past_days": 1,
                     "forecast_days": 7,
                 },
             )
             r.raise_for_status()
     except httpx.HTTPError:
         raise HTTPException(status_code=502, detail="No se pudo consultar el pronóstico.")
-    d = r.json().get("daily", {})
-    dias = [
-        {"fecha": f, "lluvia_mm": mm, "probabilidad": p}
-        for f, mm, p in zip(
-            d.get("time", []),
-            d.get("precipitation_sum", []),
-            d.get("precipitation_probability_max", []),
-        )
-    ]
-    return {"dias": dias, "fuente": "Open-Meteo (modelo meteorológico)"}
+
+    datos = r.json()
+    cur = datos.get("current") or {}
+
+    # Lluvia de las ultimas 24 h: suma de las 24 horas que terminan en la hora actual
+    lluvia_24h = None
+    hourly = datos.get("hourly") or {}
+    horas = hourly.get("time") or []
+    mm_por_hora = hourly.get("precipitation") or []
+    hora_actual = str(cur.get("time", ""))[:13] + ":00"
+    if hora_actual in horas:
+        i = horas.index(hora_actual)
+        ventana = [v for v in mm_por_hora[max(0, i - 23): i + 1] if v is not None]
+        if ventana:
+            lluvia_24h = round(sum(ventana), 1)
+
+    daily = datos.get("daily") or {}
+    dias = []
+    for k, fecha in enumerate(daily.get("time") or []):
+        if k == 0:
+            continue  # es "ayer" (past_days=1): se usa solo para calcular, no se muestra
+        dias.append({
+            "fecha": fecha,
+            "codigo": _valor_dia(daily, "weather_code", k),
+            "tmax": _valor_dia(daily, "temperature_2m_max", k),
+            "tmin": _valor_dia(daily, "temperature_2m_min", k),
+            "lluvia_mm": _valor_dia(daily, "precipitation_sum", k),
+            "probabilidad": _valor_dia(daily, "precipitation_probability_max", k),
+        })
+
+    return {
+        "actual": {
+            "temperatura": cur.get("temperature_2m"),
+            "sensacion": cur.get("apparent_temperature"),
+            "humedad": cur.get("relative_humidity_2m"),
+            "viento_kmh": cur.get("wind_speed_10m"),
+            "codigo": cur.get("weather_code"),
+            "hora": cur.get("time"),
+        },
+        "lluvia_24h_mm": lluvia_24h,
+        "dias": dias,
+        "fuente": "Open-Meteo (modelo meteorológico)",
+    }
 
 
 # Siempre al final: el router de WhatsApp
