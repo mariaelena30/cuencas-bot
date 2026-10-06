@@ -266,6 +266,17 @@ localidades: dict = {
         "tipo_inundacion_dominante": "pluvial",
         "influencia_internacional": None,
     },
+    "saenz_pena": {
+        "nombre": "Presidencia Roque Sáenz Peña", "cuenca_clave": None, "nivel_metros": None,
+        "umbral_alerta": None, "umbral_evacuacion": None,
+        # Valor provisorio: se reemplaza con el primer dato real de Open-Meteo
+        # apenas corre el actualizador de precipitacion.
+        "precipitacion_acumulada_mm": 0.0,
+        "fuente": "Localidad afectada por lluvias en Chaco (agregada 06/10/2026). Sin estacion de nivel de rio; lluvia estimada por modelo (Open-Meteo).",
+        "conectado": False, "ultima_verificacion": None,
+        "tipo_inundacion_dominante": "pluvial",
+        "influencia_internacional": None,
+    },
 }
 
 BARRIOS_VULNERABLES: dict = {
