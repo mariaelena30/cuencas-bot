@@ -8,17 +8,17 @@
       "titular_fuente": "ITAIPU abre nuevamente de manera temporal su vertedero para regular el nivel del embalse - Itaipu Binacional",
       "link_fuente": "https://news.google.com/rss/articles/CBMiywFBVV95cUxNUXgwY3JaM0xjMy1tNGlnWEtYY1BJV0ZTWWtXT3hpbGx4Y0dVVllKSmtaUzZCYzFYT0ExUkJkcHdwOC1wSFVaeDNYT2trR0pDWFRxeldDTGZIcjltQ1pWcDdFWk1lQy1vczNuWE04aXowM0dSMkFac0xROVZJZ2tQdGhDVE5pMFItUnFXRGxzR3B1akpCVVphNnpSeDVXWWNxUk9fdjExXzZYdUNXS1ZoVjVyeXM4MFc3ZVQ4ODNFOWRJSndhcU1iNDEyaw?oc=5",
       "dias_hasta_corrientes_aprox": "4 a 7 dias",
-      "ultima_verificacion": "2026-10-07T22:26:53.045568+00:00"
+      "ultima_verificacion": "2026-10-08T03:39:15.400487+00:00"
     },
     "yacyreta": {
       "nombre": "Yacyretá",
       "estado": "ABIERTO",
-      "fecha_evento": "2026-10-07T20:32:48+00:00",
+      "fecha_evento": "2026-10-07T23:25:01+00:00",
       "dias_desde_evento": 0,
-      "titular_fuente": "Yacyretá abrió compuertas por la crecida del Paraná: monitorean el impacto en localidades de Corrientes - NEA HOY",
-      "link_fuente": "https://news.google.com/rss/articles/CBMizgFBVV95cUxNeTZVV3pPSTNYX2NidmNQVE1acnVBdFJ3T2NkcWx3Yks4OUNUOXhkUlg4MURNejVGcFh5M0FfNUI4eEpTcVZrVVpxRUlVdjJQbGVGNVY4eW1sRl9WR2RHeHRlenpoUnE1YjZ1M1h5YjFSTnBYZTBxN2JRRFBKbTJ4dGNOSVNOOG9ldXgzLU9VLVJ1TFgxSlVDTkZpRnFmSXhZcHp1YVNHcXRfdU5WQUc1OVVRWkNNaktHM0dDVjROQXlrQVpVWHRxNmdCY19Fdw?oc=5",
+      "titular_fuente": "Yacyretá abrió sus compuertas y hay evacuaciones frente a Ituzaingó - Norte Corrientes",
+      "link_fuente": "https://news.google.com/rss/articles/CBMiqgFBVV95cUxQNDFTWlFGV05jaHNCQXc5N0VMNzRSMGJMQ3N6VGFRS3ZhbVhZOUpaN3FNTjgwbWdIN3hvSWkzbDQzYktQZktpWnRwai1ra1plZEJ1TVlqdlNyMUNLejB0UUJmWnZpOGJydERZSzZ5VS1LdGFhNXZ2Vk5ORjc1c2lBV2hnNWZZSWd5RDBoZ01uUk9qSnMxekg3UHhPWXhQbk5hWUVPZHdmSk04UQ?oc=5",
       "dias_hasta_corrientes_aprox": "1 a 3 dias",
-      "ultima_verificacion": "2026-10-07T22:26:53.402360+00:00"
+      "ultima_verificacion": "2026-10-08T03:39:15.752588+00:00"
     }
   },
   "alerta_temprana": {
@@ -28,5 +28,5 @@
       "Yacyretá abrió vertedero hace 0 día(s) — posible subida del Paraná en Corrientes/Chaco en 1 a 3 dias."
     ]
   },
-  "actualizado": "2026-10-07T22:26:53.402380+00:00"
+  "actualizado": "2026-10-08T03:39:15.752608+00:00"
 }
