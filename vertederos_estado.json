@@ -8,17 +8,17 @@
       "titular_fuente": "Abren las compuertas de la represa Itaipú por las lluvias y el aumento del caudal del río Paraná - Clarin.com",
       "link_fuente": "https://news.google.com/rss/articles/CBMiswFBVV95cUxNWk9KeXpCVE5iamozTzdmcURETDNOX0xpVGhsbDVobERBR2NGYVJBV0xMcW1RaEdsNzY2QVpJeDBPSTNrOTlGUERlclRqeDFSVFgyaEIwdGFZc1F5NGxXdjZVWnJGT3lCbllVcjVTS0ZrYnJMMHR4OHB0SWJjNld3QUwtY243M2ZoYmFpZ21ZdkMtV0dKV1pXMXgyTGw4WjZkSkZLNTZDUmNNTjFUcDNydWNQbw?oc=5",
       "dias_hasta_corrientes_aprox": "4 a 7 dias",
-      "ultima_verificacion": "2026-10-12T23:57:58.513245+00:00"
+      "ultima_verificacion": "2026-10-13T05:34:41.225847+00:00"
     },
     "yacyreta": {
       "nombre": "Yacyretá",
       "estado": "ABIERTO",
-      "fecha_evento": "2026-10-12T22:19:16+00:00",
+      "fecha_evento": "2026-10-13T03:26:42+00:00",
       "dias_desde_evento": 0,
-      "titular_fuente": "Yacyretá abrió sus compuertas: el caudal del Paraná supera en un 40% el promedio habitual - Canal Doce Misiones",
-      "link_fuente": "https://news.google.com/rss/articles/CBMiiAFBVV95cUxPVFNOZWZWbEZLVjhQNE91OUR5NmFoQXZRZGV0dWpiYTRMVDFVUXM2eE01X2F1Z29jM2cxbFRvYlk4bjRJbG9RTmN5d3p5WG9vN3pYcl93azFNbjN5cUxmcDI4Z0RaRDB3d2lFUHIzTGo3UjdwTmFjcl9FbHZ2N2FFbW16TmlYS1Yy?oc=5",
+      "titular_fuente": "Abre hidroeléctrica Yacyretá compuertas por crecida del río Paraná - MVS Noticias",
+      "link_fuente": "https://news.google.com/rss/articles/CBMiuwFBVV95cUxNMERxM0FSS0pCWGF6VkhMNlFYOXV5QUZZV3ctWkFhaGx6cE41Q0JCNXdGOEhjeVFFeGU4anhJNTVoSmVIWUZjTlZUMTFBMlNnUHQtOW5fc21wQmZGYjNkSjA2SVQ3b05kVnRJSnNvSW1fX0R2OE9zU0Vxa0Fsb2JkNV9ELXpIbW1nWUVDS1NVS0hCc2pvcVNuck1SWlBrdktxRzI0dDhwTDhEN3RGQ3lCcks2cV9qOHU4RHRV?oc=5",
       "dias_hasta_corrientes_aprox": "1 a 3 dias",
-      "ultima_verificacion": "2026-10-12T23:57:59.002417+00:00"
+      "ultima_verificacion": "2026-10-13T05:34:41.651413+00:00"
     }
   },
   "alerta_temprana": {
@@ -28,5 +28,5 @@
       "Yacyretá abrió vertedero hace 0 día(s) — posible subida del Paraná en Corrientes/Chaco en 1 a 3 dias."
     ]
   },
-  "actualizado": "2026-10-12T23:57:59.002442+00:00"
+  "actualizado": "2026-10-13T05:34:41.651435+00:00"
 }
