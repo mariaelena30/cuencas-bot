@@ -27,6 +27,7 @@ CONFIGURACION NECESARIA (una sola vez, no hace falta repetirla):
 import json
 import os
 import time
+from datetime import datetime, timedelta, timezone
 import firebase_admin
 from firebase_admin import credentials, firestore
 
@@ -91,15 +92,84 @@ COLECCION_HISTORICO = "historico_niveles"
 MAX_LECTURAS_HISTORICO = 90
 
 
+# Argentina no usa horario de verano (UTC-3 todo el año), asi que alcanza
+# con un desfase fijo y no hace falta ninguna base de zonas horarias.
+ZONA_ARGENTINA = timezone(timedelta(hours=-3))
+
+
+def _instante(fecha_iso: str) -> datetime:
+    """Convierte un texto ISO a fecha con zona horaria. Si no trae zona, se
+    toma como UTC. Si no se puede leer, devuelve una fecha muy vieja para que
+    quede al principio y no rompa el ordenamiento."""
+    try:
+        dt = datetime.fromisoformat(str(fecha_iso).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return datetime.min.replace(tzinfo=timezone.utc)
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def _dia_local(fecha_iso: str) -> str:
+    """Dia calendario en Argentina (AAAA-MM-DD). Se usa para guardar UNA
+    lectura por dia; con la fecha UTC, una lectura de las 22:00 en Chaco
+    caia en el dia siguiente."""
+    return _instante(fecha_iso).astimezone(ZONA_ARGENTINA).strftime("%Y-%m-%d")
+
+
 def guardar_lectura_historica(clave: str, nivel_metros: float, momento_iso: str) -> None:
     ref = get_db().collection(COLECCION_HISTORICO).document(clave)
     doc = ref.get()
     lecturas = (doc.to_dict() or {}).get("lecturas", []) if doc.exists else []
-    dia = momento_iso[:10]
-    lecturas = [l for l in lecturas if str(l.get("fecha", ""))[:10] != dia]
+    dia = _dia_local(momento_iso)
+    lecturas = [l for l in lecturas if _dia_local(l.get("fecha", "")) != dia]
     lecturas.append({"fecha": momento_iso, "altura_m": nivel_metros})
-    lecturas.sort(key=lambda l: l["fecha"])
+    lecturas.sort(key=lambda l: _instante(l["fecha"]))
     ref.set({"lecturas": lecturas[-MAX_LECTURAS_HISTORICO:]})
+
+
+def guardar_historico_masivo(clave: str, nuevas: list) -> int:
+    """Carga varias lecturas de una sola vez (1 lectura + 1 escritura en
+    Firestore). Se usa para cargar el historial diario publicado por la
+    fuente. Para un mismo dia, la lectura de la fuente reemplaza a la que ya
+    estaba. Devuelve cuantas lecturas se procesaron."""
+    ref = get_db().collection(COLECCION_HISTORICO).document(clave)
+    doc = ref.get()
+    existentes = (doc.to_dict() or {}).get("lecturas", []) if doc.exists else []
+    por_dia = {}
+    for l in existentes:
+        por_dia[_dia_local(l.get("fecha", ""))] = l
+    for l in nuevas:
+        por_dia[_dia_local(l["fecha"])] = {"fecha": l["fecha"], "altura_m": l["altura_m"]}
+    ordenadas = sorted(por_dia.values(), key=lambda l: _instante(l["fecha"]))
+    ref.set({"lecturas": ordenadas[-MAX_LECTURAS_HISTORICO:]})
+    return len(nuevas)
+
+
+# ---------------------------------------------------------------------
+# REFERENCIA DEL RIO (agregado 13/10/2026)
+#
+# Tabla completa de estaciones del Parana y del Paraguay (Prefectura Naval
+# via CIM-UNL), incluidas las de aguas arriba. Se muestra como informacion
+# de referencia: no son localidades del portal. Un documento por fuente.
+# ---------------------------------------------------------------------
+COLECCION_REFERENCIA = "referencia_rio"
+SEGUNDOS_CACHE_REFERENCIA = 120
+_CACHE_REFERENCIA: dict = {}
+
+
+def guardar_referencia_rio(clave: str, datos: dict) -> None:
+    get_db().collection(COLECCION_REFERENCIA).document(clave).set(datos)
+    _CACHE_REFERENCIA.pop(clave, None)
+
+
+def leer_referencia_rio(clave: str) -> dict | None:
+    ahora = time.time()
+    guardado = _CACHE_REFERENCIA.get(clave)
+    if guardado and ahora - guardado[0] < SEGUNDOS_CACHE_REFERENCIA:
+        return guardado[1]
+    doc = get_db().collection(COLECCION_REFERENCIA).document(clave).get()
+    datos = doc.to_dict() if doc.exists else None
+    _CACHE_REFERENCIA[clave] = (ahora, datos)
+    return datos
 
 
 def leer_historico(clave: str) -> list:
