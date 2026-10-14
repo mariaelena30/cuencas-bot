@@ -28,4 +28,4 @@ jobs:
       - name: Cargar historico
         env:
           API_KEY_SENSORES: ${{ secrets.API_KEY_SENSORES }}
-        run: python cargar_historico_unl.py
+        run: python -u cargar_historico_unl.py   # -u: muestra el log en vivo
