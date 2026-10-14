@@ -1,0 +1,31 @@
+name: Cargar historico de niveles (UNL)
+
+# Baja el historial diario publicado por la UNL (CIM-FICH) y lo guarda en el
+# backend. Se corre a mano la primera vez y despues una vez por semana para
+# completar cualquier dia que haya quedado sin guardar.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 9 * * 1"   # lunes 09:30 UTC (06:30 en Chaco)
+
+permissions:
+  contents: read
+
+jobs:
+  historico:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: pip install requests beautifulsoup4 lxml
+
+      - name: Cargar historico
+        env:
+          API_KEY_SENSORES: ${{ secrets.API_KEY_SENSORES }}
+        run: python cargar_historico_unl.py
