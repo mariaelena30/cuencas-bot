@@ -79,6 +79,7 @@ SIN_FUENTE_DISPONIBLE = [
 
 # Posicion de cada columna en la tabla de la fuente
 COL_ALTURA = 2
+COL_ALTURA_ANTERIOR = 5
 COL_ALERTA = 6
 COL_EVACUACION = 7
 
@@ -110,11 +111,9 @@ def despertar_backend() -> bool:
     return False
 
 
-def obtener_datos_estaciones() -> dict:
-    """
-    Descarga y parsea la tabla de alturas. Devuelve un dict:
-    { "Barranqueras": {"altura": 4.16, "alerta": 6.00, "evacuacion": 6.50}, ... }
-    """
+def _descargar_filas() -> list:
+    """Descarga la pagina de la fuente y devuelve la tabla como lista de filas
+    (cada fila, una lista de textos de celda)."""
     resp = None
     ultimo_error = None
     for intento in range(1, 4):
@@ -137,10 +136,45 @@ def obtener_datos_estaciones() -> dict:
         raise RuntimeError("No se encontro ninguna tabla en la pagina fuente. "
                            "El sitio pudo haber cambiado de estructura, revisar manualmente.")
 
-    filas = tabla.find_all("tr")
+    return [
+        [c.get_text(strip=True) for c in fila.find_all(["td", "th"])]
+        for fila in tabla.find_all("tr")
+    ]
+
+
+def obtener_tabla_completa(filas: list) -> list:
+    """Todas las estaciones de la tabla (Parana, Paraguay, aguas arriba), para
+    el panel de referencia del rio. La tendencia NO se lee del icono de la
+    pagina: se deduce del signo de la variacion."""
+    estaciones = []
+    for celdas in filas:
+        if len(celdas) < 8:
+            continue
+        puerto, rio = celdas[0], celdas[1]
+        if not puerto or puerto.lower() == "puerto":
+            continue  # encabezado
+        altura = _a_float(celdas[COL_ALTURA])
+        anterior = _a_float(celdas[COL_ALTURA_ANTERIOR])
+        variacion = round(altura - anterior, 2) if altura is not None and anterior is not None else None
+        estaciones.append({
+            "puerto": puerto,
+            "rio": rio,
+            "altura_m": altura,
+            "variacion_m": variacion,
+            "altura_anterior_m": anterior,
+            "alerta_m": _a_float(celdas[COL_ALERTA]),
+            "evacuacion_m": _a_float(celdas[COL_EVACUACION]),
+        })
+    return estaciones
+
+
+def obtener_datos_estaciones(filas: list) -> dict:
+    """
+    Parsea las estaciones que usa el portal. Devuelve un dict:
+    { "Barranqueras": {"altura": 4.16, "alerta": 6.00, "evacuacion": 6.50}, ... }
+    """
     resultado = {}
-    for fila in filas:
-        celdas = [c.get_text(strip=True) for c in fila.find_all(["td", "th"])]
+    for celdas in filas:
         if len(celdas) < 6:
             continue
         nombre_estacion = celdas[0]
@@ -151,28 +185,64 @@ def obtener_datos_estaciones() -> dict:
         evacuacion = _a_float(celdas[COL_EVACUACION]) if len(celdas) > COL_EVACUACION else None
         if altura is None:
             continue  # "sin datos" ese dia, no actualizamos con basura
+        anterior = _a_float(celdas[COL_ALTURA_ANTERIOR]) if len(celdas) > COL_ALTURA_ANTERIOR else None
+        variacion = round(altura - anterior, 2) if anterior is not None else None
         resultado[nombre_estacion] = {
             "altura": altura,
+            "variacion_24h": variacion,
             "alerta": alerta,
             "evacuacion": evacuacion,
         }
     return resultado
 
 
-def actualizar_backend(localidad: str, nivel_metros: float, intentos: int = 3) -> bool:
+def actualizar_backend(localidad: str, nivel_metros: float, variacion_24h=None, intentos: int = 3) -> bool:
     clave_api = os.environ.get("API_KEY_SENSORES", "")
     for intento in range(1, intentos + 1):
         try:
             r = requests.post(
                 f"{BACKEND_URL}/hidrologia/actualizar",
-                json={"localidad": localidad, "nivel_metros": nivel_metros},
+                json={
+                    "localidad": localidad,
+                    "nivel_metros": nivel_metros,
+                    "variacion_24h_m": variacion_24h,
+                },
                 headers={"X-API-Key": clave_api},
                 timeout=TIMEOUT,
             )
+            if r.status_code in (401, 403):
+                # Clave incorrecta: reintentar no sirve.
+                print(f"  [ERROR] {localidad}: el backend rechazo la clave ({r.status_code}). "
+                      "Revisar que API_KEY_SENSORES sea igual en GitHub y en Render.")
+                return False
             r.raise_for_status()
             return True
         except Exception as e:
             print(f"  [ERROR] {localidad}, intento {intento}/{intentos}: {e}")
+            if intento < intentos:
+                time.sleep(15)
+    return False
+
+
+def enviar_referencia_rio(estaciones: list, intentos: int = 3) -> bool:
+    """Manda la tabla completa de estaciones para el panel 'aguas arriba'."""
+    clave_api = os.environ.get("API_KEY_SENSORES", "")
+    for intento in range(1, intentos + 1):
+        try:
+            r = requests.post(
+                f"{BACKEND_URL}/rio/referencia",
+                json={"estaciones": estaciones,
+                      "fuente": "Prefectura Naval Argentina, via CIM-FICH-UNL"},
+                headers={"X-API-Key": clave_api},
+                timeout=TIMEOUT,
+            )
+            if r.status_code in (401, 403):
+                print(f"  [ERROR] referencia del rio: clave rechazada ({r.status_code}).")
+                return False
+            r.raise_for_status()
+            return True
+        except Exception as e:
+            print(f"  [ERROR] referencia del rio, intento {intento}/{intentos}: {e}")
             if intento < intentos:
                 time.sleep(15)
     return False
@@ -191,7 +261,9 @@ def main():
     despertar_backend()
 
     try:
-        datos = obtener_datos_estaciones()
+        filas = _descargar_filas()
+        datos = obtener_datos_estaciones(filas)
+        tabla_completa = obtener_tabla_completa(filas)
     except Exception as e:
         print(f"[ERROR FATAL] No se pudo leer la fuente: {e}")
         sys.exit(1)
@@ -210,8 +282,15 @@ def main():
             exacto = destino["exacto"]
             etiqueta = "medicion directa" if exacto else "APROXIMADO, estacion cercana"
             print(f"{nombre_estacion} ({etiqueta}) -> {clave}: {info['altura']} m")
-            ok = actualizar_backend(clave, info["altura"])
+            ok = actualizar_backend(clave, info["altura"], info.get("variacion_24h"))
             (actualizadas if ok else fallidas).append(clave)
+
+    if tabla_completa:
+        print(f"\nEnviando referencia del rio: {len(tabla_completa)} estaciones.")
+        if not enviar_referencia_rio(tabla_completa):
+            fallidas.append("referencia_rio")
+    else:
+        print("[AVISO] No se pudo armar la tabla completa de estaciones.")
 
     print("\n--- Localidades sin fuente publica disponible (sin tocar) ---")
     for clave in SIN_FUENTE_DISPONIBLE:
