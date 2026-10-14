@@ -19,6 +19,7 @@ Argentina (fich.unl.edu.ar/cim/rios/parana/alturas) el 09/08/2026.
 import hmac
 import json
 import os
+import unicodedata
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -139,6 +140,7 @@ CUENCAS: dict = {
 
 localidades: dict = {
     "resistencia": {
+        "lat": -27.4511, "lon": -58.9866,
         "nombre": "Resistencia", "cuenca_clave": "parana", "nivel_metros": 2.65,
         "umbral_alerta": 6.00, "umbral_evacuacion": 6.50, "precipitacion_acumulada_mm": 12.0,
         "fuente": "Prefectura Naval Argentina, estacion Barranqueras (mismo tramo, ~8km)",
@@ -147,6 +149,7 @@ localidades: dict = {
         "influencia_internacional": "Lluvias en el centro-este de Brasil y aporte del rio Paraguay.",
     },
     "barranqueras": {
+        "lat": -27.4815, "lon": -58.9324,
         "nombre": "Barranqueras", "cuenca_clave": "parana", "nivel_metros": 2.65,
         "umbral_alerta": 6.00, "umbral_evacuacion": 6.50, "precipitacion_acumulada_mm": 12.0,
         "fuente": "Prefectura Naval Argentina, estacion Barranqueras (medicion directa)",
@@ -155,6 +158,7 @@ localidades: dict = {
         "influencia_internacional": "Lluvias en el centro-este de Brasil y aporte del rio Paraguay.",
     },
     "puerto_bermejo": {
+        "lat": -26.8667, "lon": -58.6333,
         "nombre": "Puerto Bermejo", "cuenca_clave": "paraguay", "nivel_metros": 2.75,
         "umbral_alerta": 6.50, "umbral_evacuacion": 7.00, "precipitacion_acumulada_mm": 15.0,
         "fuente": "Prefectura Naval Argentina, estacion Bermejo (aproximado, zona de confluencia)",
@@ -163,6 +167,7 @@ localidades: dict = {
         "influencia_internacional": "Cuenca del rio Bermejo: nace en Bolivia y el noroeste argentino.",
     },
     "el_sauzalito": {
+        "lat": -24.4236, "lon": -61.6842,
         "nombre": "El Sauzalito", "cuenca_clave": "bermejo", "nivel_metros": 3.00,
         "umbral_alerta": 5.20, "umbral_evacuacion": 6.00, "precipitacion_acumulada_mm": 6.00,
         "fuente": "Reportes Prefectura / Comision Binacional (sin API publica estable)",
@@ -171,6 +176,7 @@ localidades: dict = {
         "influencia_internacional": "Cuenca del rio Bermejo, compartida con Bolivia y el noroeste argentino.",
     },
     "isla_del_cerrito": {
+        "lat": -27.3667, "lon": -58.6333,
         "nombre": "Isla del Cerrito", "cuenca_clave": "paraguay", "nivel_metros": 2.85,
         "umbral_alerta": 6.20, "umbral_evacuacion": 6.80, "precipitacion_acumulada_mm": 12.0,
         "fuente": "Prefectura Naval Argentina, estacion Isla del Cerrito (medicion directa)",
@@ -179,6 +185,7 @@ localidades: dict = {
         "influencia_internacional": "Confluencia Parana-Paraguay: lluvias en Brasil, Paraguay y Bolivia.",
     },
     "puerto_vilelas": {
+        "lat": -27.4967, "lon": -58.9394,
         "nombre": "Puerto Vilelas", "cuenca_clave": "parana", "nivel_metros": 2.65,
         "umbral_alerta": 6.00, "umbral_evacuacion": 6.50, "precipitacion_acumulada_mm": 12.0,
         "fuente": "Prefectura Naval Argentina, estacion Barranqueras (mismo tramo, ~5km)",
@@ -187,6 +194,7 @@ localidades: dict = {
         "influencia_internacional": "Lluvias en el centro-este de Brasil y aporte del rio Paraguay.",
     },
     "la_leonesa": {
+        "lat": -27.05, "lon": -58.6833,
         "nombre": "La Leonesa", "cuenca_clave": "paraguay", "nivel_metros": 2.60,
         "umbral_alerta": 6.50, "umbral_evacuacion": 7.00, "precipitacion_acumulada_mm": 10.0,
         "fuente": "Prefectura Naval Argentina, estacion Las Palmas (aproximado, ~5km)",
@@ -195,6 +203,7 @@ localidades: dict = {
         "influencia_internacional": "Cuenca del rio Paraguay: lluvias en Brasil, Paraguay y Bolivia.",
     },
     "pampa_del_indio": {
+        "lat": -25.9167, "lon": -59.9333,
         "nombre": "Pampa del Indio", "cuenca_clave": "bermejo", "nivel_metros": 3.20,
         "umbral_alerta": 5.00, "umbral_evacuacion": 5.70, "precipitacion_acumulada_mm": 15.0,
         "fuente": "Prefectura Naval Argentina (cobertura parcial)",
@@ -203,6 +212,7 @@ localidades: dict = {
         "influencia_internacional": "Cuenca del rio Bermejo: nace en Bolivia y el noroeste argentino.",
     },
     "villa_rio_bermejito": {
+        "lat": -25.6167, "lon": -60.1667,
         "nombre": "Villa Rio Bermejito", "cuenca_clave": "bermejo", "nivel_metros": 2.45,
         "umbral_alerta": 3.80, "umbral_evacuacion": 4.30, "precipitacion_acumulada_mm": 15.0,
         "fuente": "Prefectura Naval Argentina (cobertura parcial)",
@@ -211,6 +221,7 @@ localidades: dict = {
         "influencia_internacional": "Cuenca del rio Bermejo: nace en Bolivia y Salta.",
     },
     "fuerte_esperanza": {
+        "lat": -24.5333, "lon": -61.75,
         "nombre": "Fuerte Esperanza", "cuenca_clave": "bermejo", "nivel_metros": 3.05,
         "umbral_alerta": 5.20, "umbral_evacuacion": 6.00, "precipitacion_acumulada_mm": 6.0,
         "fuente": "Reportes Prefectura / Comision Binacional (sin API publica estable)",
@@ -219,6 +230,7 @@ localidades: dict = {
         "influencia_internacional": "Cuenca del rio Bermejo, compartida con Bolivia y el noroeste argentino.",
     },
     "san_martin_chaco": {
+        "lat": -26.5375, "lon": -59.3417,
         "nombre": "General José de San Martín", "cuenca_clave": None, "nivel_metros": None,
         "umbral_alerta": None, "umbral_evacuacion": None, "precipitacion_acumulada_mm": 38.0,
         "fuente": "Identificada como zona de riesgo pluvial en Gomez et al. (FACENA-UNNE, 2014).",
@@ -227,6 +239,7 @@ localidades: dict = {
         "influencia_internacional": None,
     },
     "santa_sylvina": {
+        "lat": -27.783, "lon": -61.15,
         "nombre": "Santa Sylvina", "cuenca_clave": None, "nivel_metros": None,
         "umbral_alerta": None, "umbral_evacuacion": None, "precipitacion_acumulada_mm": 22.0,
         "fuente": "Evento real documentado: temporal del 07/06/2026.",
@@ -235,6 +248,7 @@ localidades: dict = {
         "influencia_internacional": None,
     },
     "charata": {
+        "lat": -27.218, "lon": -61.1874,
         "nombre": "Charata", "cuenca_clave": None, "nivel_metros": None,
         "umbral_alerta": None, "umbral_evacuacion": None, "precipitacion_acumulada_mm": 105.0,
         "fuente": "Identificada como zona de riesgo pluvial en Gomez et al. (FACENA-UNNE, 2014).",
@@ -243,6 +257,7 @@ localidades: dict = {
         "influencia_internacional": None,
     },
     "quitilipi": {
+        "lat": -26.87, "lon": -60.22,
         "nombre": "Quitilipi", "cuenca_clave": None, "nivel_metros": None,
         "umbral_alerta": None, "umbral_evacuacion": None, "precipitacion_acumulada_mm": 32.0,
         "fuente": "Gobierno provincial anuncio plan integral para prevenir inundaciones en Quitilipi.",
@@ -251,6 +266,7 @@ localidades: dict = {
         "influencia_internacional": None,
     },
     "castelli": {
+        "lat": -25.95, "lon": -60.617,
         "nombre": "Juan José Castelli", "cuenca_clave": None, "nivel_metros": None,
         "umbral_alerta": None, "umbral_evacuacion": None, "precipitacion_acumulada_mm": 149.0,
         "fuente": "Identificada como zona de riesgo pluvial en Gomez et al. (FACENA-UNNE, 2014).",
@@ -259,6 +275,7 @@ localidades: dict = {
         "influencia_internacional": None,
     },
     "presidencia_de_la_plaza": {
+        "lat": -26.9986, "lon": -59.8466,
         "nombre": "Presidencia de la Plaza", "cuenca_clave": None, "nivel_metros": None,
         "umbral_alerta": None, "umbral_evacuacion": None, "precipitacion_acumulada_mm": 21.0,
         "fuente": "Identificada como zona de riesgo pluvial en Gomez et al. (FACENA-UNNE, 2014).",
@@ -267,6 +284,7 @@ localidades: dict = {
         "influencia_internacional": None,
     },
     "saenz_pena": {
+        "lat": -26.7853, "lon": -60.4388,
         "nombre": "Presidencia Roque Sáenz Peña", "cuenca_clave": None, "nivel_metros": None,
         "umbral_alerta": None, "umbral_evacuacion": None,
         # Valor provisorio: se reemplaza con el primer dato real de Open-Meteo
@@ -480,6 +498,7 @@ def _cuenca_con_estado(clave: str) -> dict:
             "ultima_verificacion": loc_viva["ultima_verificacion"],
             "anomalia_velocidad": loc_viva.get("anomalia_velocidad", False),
             "velocidad_m_h": loc_viva.get("velocidad_m_h"),
+            "variacion_24h_m": loc_viva.get("variacion_24h_m"),
             "fuente_dato_en_vivo": f"Espejo de la localidad '{localidad_referencia}' (misma estacion)",
         }
     else:
@@ -503,6 +522,9 @@ class ActualizacionHidrologia(BaseModel):
     localidad: str
     nivel_metros: float
     precipitacion_acumulada_mm: float | None = None
+    # Variacion en 24 h segun la fuente (altura de hoy - altura anterior de la
+    # tabla de Prefectura). Es la unica base para detectar una subida rapida.
+    variacion_24h_m: float | None = None
 
 
 class ActualizacionSatelital(BaseModel):
@@ -615,6 +637,110 @@ def obtener_historico(estacion: str, dias: int = 60):
 
     lecturas.sort(key=lambda x: x["fecha"])
     return {"estacion": texto, "lecturas": lecturas, "n_lecturas": len(lecturas)}
+
+
+class LecturaHistorica(BaseModel):
+    fecha: str
+    altura_m: float
+
+
+class ActualizacionHistorico(BaseModel):
+    localidad: str
+    lecturas: list[LecturaHistorica]
+
+
+class EstacionRio(BaseModel):
+    puerto: str
+    rio: str
+    altura_m: float | None = None
+    variacion_m: float | None = None
+    altura_anterior_m: float | None = None
+    alerta_m: float | None = None
+    evacuacion_m: float | None = None
+
+
+class ActualizacionReferenciaRio(BaseModel):
+    estaciones: list[EstacionRio]
+    fuente: str = "Prefectura Naval Argentina, via CIM-FICH-UNL"
+
+
+@app.post("/hidrologia/historico")
+def cargar_historico(datos: ActualizacionHistorico, x_api_key: str | None = Header(default=None)):
+    """Carga masiva del historial diario de una localidad (lo usa
+    cargar_historico_unl.py). Valida cada lectura antes de guardar."""
+    exigir_clave_escritura(x_api_key)
+
+    clave = datos.localidad.lower()
+    if clave not in localidades:
+        raise HTTPException(status_code=404, detail=f"Localidad '{datos.localidad}' no reconocida")
+    if len(datos.lecturas) > 400:
+        raise HTTPException(status_code=422, detail="Demasiadas lecturas en un solo envio")
+
+    ahora = datetime.now(timezone.utc)
+    validas = []
+    for l in datos.lecturas:
+        try:
+            momento = datetime.fromisoformat(l.fecha.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if momento.tzinfo is None:
+            momento = momento.replace(tzinfo=timezone.utc)
+        if momento > ahora + timedelta(days=1):
+            continue  # fecha futura: dato invalido
+        if not (-1.0 <= l.altura_m <= 20.0):
+            continue
+        validas.append({"fecha": momento.astimezone(timezone.utc).isoformat(), "altura_m": l.altura_m})
+
+    if not validas:
+        raise HTTPException(status_code=422, detail="Ninguna lectura valida en el envio")
+
+    try:
+        guardadas = firestore_db.guardar_historico_masivo(clave, validas)
+    except Exception as e:
+        print(f"[AVISO] No se pudo guardar el historico masivo de {clave}: {e}")
+        raise HTTPException(status_code=503, detail="No se pudo guardar el historico")
+    return {"ok": True, "localidad": clave, "recibidas": len(datos.lecturas), "guardadas": guardadas}
+
+
+@app.post("/rio/referencia")
+def actualizar_referencia_rio(datos: ActualizacionReferenciaRio, x_api_key: str | None = Header(default=None)):
+    exigir_clave_escritura(x_api_key)
+    if not datos.estaciones or len(datos.estaciones) > 100:
+        raise HTTPException(status_code=422, detail="Cantidad de estaciones invalida")
+
+    estaciones = []
+    for e in datos.estaciones:
+        if e.altura_m is not None and not (-5.0 <= e.altura_m <= 60.0):
+            continue  # fuera de todo rango posible: se descarta
+        estaciones.append(e.model_dump())
+
+    ahora = datetime.now(timezone.utc)
+    try:
+        firestore_db.guardar_referencia_rio(
+            "parana_paraguay",
+            {
+                "estaciones": estaciones,
+                "fuente": datos.fuente[:200],
+                "consultado_utc": ahora.isoformat(),
+            },
+        )
+    except Exception as e:
+        print(f"[AVISO] No se pudo guardar la referencia del rio: {e}")
+        raise HTTPException(status_code=503, detail="No se pudo guardar la referencia")
+    return {"ok": True, "estaciones": len(estaciones)}
+
+
+@app.get("/rio/referencia")
+def leer_referencia_rio():
+    """Estaciones del Parana y del Paraguay (incluye aguas arriba). Es
+    informacion de referencia y siempre indica cuando fue consultada."""
+    try:
+        doc = firestore_db.leer_referencia_rio("parana_paraguay")
+    except Exception:
+        return {"estaciones": [], "consultado_utc": None, "error": "Referencia no disponible."}
+    if not doc:
+        return {"estaciones": [], "consultado_utc": None, "aviso": "Todavia no se cargaron datos."}
+    return doc
 
 
 @app.get("/")
@@ -895,28 +1021,19 @@ def actualizar_hidrologia(datos: ActualizacionHidrologia, x_api_key: str | None 
 
     ahora = datetime.now(timezone.utc)
 
-    try:
-        estado_anterior = firestore_db.leer_estado(clave) or {}
-    except Exception:
-        estado_anterior = {}
-
-    nivel_anterior = estado_anterior.get("nivel_metros", localidades[clave]["nivel_metros"])
-    hora_anterior_iso = estado_anterior.get("hora_lectura_anterior")
-
+    # La velocidad ya NO se calcula entre dos envios consecutivos: la fuente
+    # (Prefectura) se actualiza una vez por dia, y dos envios seguidos del
+    # mismo dato con pocos minutos de diferencia daban falsas alertas. Solo se
+    # usa la variacion de 24 h que informa la propia fuente.
     velocidad_m_h = None
     anomalia_velocidad = False
-    if hora_anterior_iso and nivel_anterior is not None:
-        try:
-            hora_anterior = datetime.fromisoformat(hora_anterior_iso)
-            horas_transcurridas = (ahora - hora_anterior).total_seconds() / 3600
-            if horas_transcurridas >= (1 / 60):
-                velocidad_m_h = round((datos.nivel_metros - nivel_anterior) / horas_transcurridas, 3)
-                anomalia_velocidad = velocidad_m_h >= UMBRAL_VELOCIDAD_M_H
-        except (ValueError, TypeError):
-            pass
+    if datos.variacion_24h_m is not None:
+        velocidad_m_h = round(datos.variacion_24h_m / 24, 3)
+        anomalia_velocidad = velocidad_m_h >= UMBRAL_VELOCIDAD_M_H
 
     nuevo_estado = {
         "nivel_metros": datos.nivel_metros,
+        "variacion_24h_m": datos.variacion_24h_m,
         "velocidad_m_h": velocidad_m_h,
         "anomalia_velocidad": anomalia_velocidad,
         "hora_lectura_anterior": ahora.isoformat(),
@@ -1182,31 +1299,56 @@ def listar_precipitacion():
 # PRONOSTICO DE LLUVIA POR LUGAR (Open-Meteo)
 # Lo usa el componente PronosticoLluvia.tsx del portal.
 # -----------------------------------------------------------------------
+def _normalizar(texto: str) -> str:
+    """Minusculas y sin tildes, para que buscar 'saenz pena' encuentre 'Sáenz Peña'."""
+    descompuesto = unicodedata.normalize("NFD", texto)
+    sin_tildes = "".join(c for c in descompuesto if unicodedata.category(c) != "Mn")
+    return sin_tildes.lower().replace("_", " ").strip()
+
+
 @app.get("/pronostico/buscar")
 async def buscar_lugar(q: str):
-    if len(q.strip()) < 2:
+    consulta = q.strip()
+    if len(consulta) < 2:
         return {"resultados": []}
+
+    # 1) Localidades del propio portal (con coordenadas cargadas por nosotros):
+    #    se encuentran aunque el buscador externo no las reconozca.
+    consulta_norm = _normalizar(consulta)
+    propios = []
+    for clave, loc in localidades.items():
+        lat, lon = loc.get("lat"), loc.get("lon")
+        if lat is None or lon is None:
+            continue
+        if consulta_norm in _normalizar(loc["nombre"]) or consulta_norm in _normalizar(clave):
+            propios.append({"nombre": loc["nombre"], "provincia": "Chaco", "lat": lat, "lon": lon})
+
+    # 2) Buscador de lugares de Open-Meteo (cualquier localidad de Argentina)
+    externos = []
     try:
         async with httpx.AsyncClient(timeout=10) as c:
             r = await c.get(
                 "https://geocoding-api.open-meteo.com/v1/search",
-                params={"name": q.strip(), "count": 6, "language": "es", "countryCode": "AR"},
+                params={"name": consulta, "count": 6, "language": "es", "countryCode": "AR"},
             )
             r.raise_for_status()
-    except httpx.HTTPError:
-        raise HTTPException(status_code=502, detail="No se pudo consultar el buscador de lugares.")
-    datos = r.json().get("results", [])
-    return {
-        "resultados": [
-            {
+        for d in r.json().get("results", []):
+            externos.append({
                 "nombre": d["name"],
                 "provincia": d.get("admin1"),
                 "lat": d["latitude"],
                 "lon": d["longitude"],
-            }
-            for d in datos
-        ]
-    }
+            })
+    except httpx.HTTPError:
+        if not propios:
+            raise HTTPException(status_code=502, detail="No se pudo consultar el buscador de lugares.")
+
+    # Sin repetir lo que ya esta en la lista propia (mismo lugar = coordenadas cercanas)
+    def es_repetido(e: dict) -> bool:
+        return any(abs(e["lat"] - p["lat"]) < 0.1 and abs(e["lon"] - p["lon"]) < 0.1 for p in propios)
+
+    resultados = propios + [e for e in externos if not es_repetido(e)]
+    return {"resultados": resultados[:8]}
 
 
 def _valor_dia(daily: dict, nombre: str, k: int):
