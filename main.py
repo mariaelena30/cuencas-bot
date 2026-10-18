@@ -525,6 +525,13 @@ class ActualizacionHidrologia(BaseModel):
     # Variacion en 24 h segun la fuente (altura de hoy - altura anterior de la
     # tabla de Prefectura). Es la unica base para detectar una subida rapida.
     variacion_24h_m: float | None = None
+    # Carga manual verificada (la hace una persona autorizada con la clave de
+    # escritura, tomando la lectura de Prefectura de la zona). Necesita la hora
+    # REAL de la lectura, con zona horaria: "2026-10-16T22:00:00-03:00".
+    manual: bool = False
+    momento_lectura: str | None = None
+    fuente_lectura: str | None = None
+    cargado_por: str | None = None
 
 
 class ActualizacionSatelital(BaseModel):
@@ -1021,6 +1028,62 @@ def actualizar_hidrologia(datos: ActualizacionHidrologia, x_api_key: str | None 
 
     ahora = datetime.now(timezone.utc)
 
+    try:
+        estado_anterior = firestore_db.leer_estado(clave) or {}
+    except Exception:
+        estado_anterior = {}
+
+    FUENTE_AUTOMATICA = "Prefectura Naval Argentina, via CIM-FICH-UNL (lectura diaria)"
+    momento_lectura = None
+
+    if datos.manual:
+        # ---- Carga manual verificada --------------------------------------
+        if not datos.momento_lectura:
+            raise HTTPException(status_code=422, detail="La carga manual necesita la fecha y hora de la lectura.")
+        try:
+            momento_lectura = datetime.fromisoformat(datos.momento_lectura.replace("Z", "+00:00"))
+        except ValueError:
+            raise HTTPException(status_code=422, detail="Fecha y hora de la lectura ilegibles.")
+        if momento_lectura.tzinfo is None:
+            raise HTTPException(status_code=422, detail="La hora de la lectura debe incluir la zona horaria.")
+        momento_lectura = momento_lectura.astimezone(timezone.utc)
+        if momento_lectura > ahora + timedelta(minutes=10):
+            raise HTTPException(status_code=422, detail="La hora de la lectura esta en el futuro.")
+        if momento_lectura < ahora - timedelta(hours=72):
+            raise HTTPException(status_code=422, detail="La lectura tiene mas de 72 horas: no se carga como actual.")
+        try:
+            previa = datetime.fromisoformat(str(estado_anterior.get("momento_lectura")).replace("Z", "+00:00"))
+            if previa.tzinfo and momento_lectura <= previa:
+                raise HTTPException(status_code=422, detail="Ya hay una lectura mas nueva guardada para esta localidad.")
+        except ValueError:
+            pass  # no habia lectura previa con hora
+
+        # El ultimo valor que llego de la fuente automatica: sirve para no
+        # pisar esta lectura con el dato diario viejo que sigue publicado.
+        if estado_anterior.get("carga_manual"):
+            ultimo_automatico = estado_anterior.get("ultimo_valor_automatico")
+        else:
+            ultimo_automatico = estado_anterior.get("nivel_metros")
+        fuente = (datos.fuente_lectura or "Prefectura Naval Argentina (carga manual)").strip()[:120]
+        cargado_por = (datos.cargado_por or "").strip()[:80] or None
+    else:
+        # ---- Lectura automatica (UNL): una vez por dia ---------------------
+        # Si ya hay una lectura manual y la fuente diaria todavia muestra el
+        # MISMO valor de siempre, no hay novedad: no se pisa la manual.
+        if (
+            estado_anterior.get("carga_manual")
+            and estado_anterior.get("ultimo_valor_automatico") == datos.nivel_metros
+        ):
+            return {
+                "ok": True,
+                "sin_cambios": True,
+                "motivo": "La fuente diaria no cambio; se conserva la lectura manual mas reciente.",
+                "localidad": _localidad_con_estado(clave),
+            }
+        ultimo_automatico = datos.nivel_metros
+        fuente = FUENTE_AUTOMATICA
+        cargado_por = None
+
     # La velocidad ya NO se calcula entre dos envios consecutivos: la fuente
     # (Prefectura) se actualiza una vez por dia, y dos envios seguidos del
     # mismo dato con pocos minutos de diferencia daban falsas alertas. Solo se
@@ -1039,6 +1102,11 @@ def actualizar_hidrologia(datos: ActualizacionHidrologia, x_api_key: str | None 
         "hora_lectura_anterior": ahora.isoformat(),
         "conectado": True,
         "ultima_verificacion": ahora.strftime("%Y-%m-%d %H:%M UTC"),
+        "carga_manual": bool(datos.manual),
+        "momento_lectura": momento_lectura.isoformat() if momento_lectura else None,
+        "fuente_lectura": fuente,
+        "cargado_por": cargado_por,
+        "ultimo_valor_automatico": ultimo_automatico,
     }
     if datos.precipitacion_acumulada_mm is not None:
         nuevo_estado["precipitacion_acumulada_mm"] = datos.precipitacion_acumulada_mm
@@ -1052,7 +1120,9 @@ def actualizar_hidrologia(datos: ActualizacionHidrologia, x_api_key: str | None 
         localidades[clave].update(nuevo_estado)
 
     try:
-        firestore_db.guardar_lectura_historica(clave, datos.nivel_metros, ahora.isoformat())
+        # En el historial, la lectura manual se guarda con SU hora real.
+        momento_historico = momento_lectura if momento_lectura else ahora
+        firestore_db.guardar_lectura_historica(clave, datos.nivel_metros, momento_historico.isoformat())
     except Exception as e:
         print(f"No se pudo guardar el historico de {clave}: {e}")
 
