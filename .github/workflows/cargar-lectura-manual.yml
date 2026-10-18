@@ -1,0 +1,69 @@
+name: Cargar lectura manual de rio (Prefectura)
+
+# Se corre a mano desde Actions > "Run workflow". Solo pueden hacerlo las
+# personas con permiso de escritura en el repositorio. La clave de escritura
+# nunca se muestra: se toma del secreto API_KEY_SENSORES.
+on:
+  workflow_dispatch:
+    inputs:
+      estacion:
+        description: "Estacion de la fuente"
+        type: choice
+        required: true
+        default: "Barranqueras"
+        options:
+          - Barranqueras
+          - Isla del Cerrito
+          - Bermejo
+          - Las Palmas
+      altura_m:
+        description: "Altura en metros (ej. 6.36)"
+        type: string
+        required: true
+      fecha_hora:
+        description: "Fecha y hora REAL de la lectura, hora de Argentina (AAAA-MM-DD HH:MM, ej. 2026-10-16 22:00)"
+        type: string
+        required: true
+      fuente:
+        description: "De donde sale la lectura"
+        type: string
+        required: true
+        default: "Prefectura Naval Argentina, zona Barranqueras (carga manual)"
+      cargado_por:
+        description: "Quien carga la lectura"
+        type: string
+        required: true
+        default: "Maria Elena Alvarez"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cargar-lectura-manual
+  cancel-in-progress: false
+
+jobs:
+  cargar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: pip install requests beautifulsoup4 lxml
+
+      # Los datos escritos por la persona pasan como variables de entorno
+      # (nunca se pegan dentro del comando), para evitar inyeccion de comandos.
+      - name: Cargar lectura
+        env:
+          API_KEY_SENSORES: ${{ secrets.API_KEY_SENSORES }}
+          ESTACION: ${{ inputs.estacion }}
+          ALTURA_M: ${{ inputs.altura_m }}
+          FECHA_HORA: ${{ inputs.fecha_hora }}
+          FUENTE: ${{ inputs.fuente }}
+          CARGADO_POR: ${{ inputs.cargado_por }}
+        run: python -u cargar_lectura_manual.py
