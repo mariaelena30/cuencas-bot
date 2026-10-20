@@ -4,29 +4,29 @@
       "nombre": "Itaipú",
       "estado": "ABIERTO",
       "fecha_evento": "2026-10-14T20:12:46+00:00",
-      "dias_desde_evento": 5,
+      "dias_desde_evento": 6,
       "titular_fuente": "La apertura de la represa Itaipú se debe a las lluvias y no prueba que Lula da Silva quiera inundar Argentina - Chequeado",
       "link_fuente": "https://news.google.com/rss/articles/CBMi4wFBVV95cUxOdVVwWjl5XzNWNDVkeWNaOS1hUEo2Ul9wb2VOSmYtUU5fOWJfLUlHbnVOTUpoUXFUaUNJaEMzX1VTTkYzM3FTd3E2d21zaVJCdzVidnlzZ0RCMmZLNHBUWTBpTlpwWDFNZzZfNF9CMElYWml6bE1Ua3oyWk95M2p5ZGpoSkNHS29LMUlVMHJsS2hXS1JtS1Q4V0ZNZmdBSFNfc3gzdlM2cFlUYmtUV1h5aGxrV2ZRQXRjWFlSNm1SZVlldmJ6YTVQMVJjd1lIaXdjT1Q4d09fTkRZbHNjQ0Izb1VNdw?oc=5",
       "dias_hasta_corrientes_aprox": "4 a 7 dias",
-      "ultima_verificacion": "2026-10-20T16:03:03.882048+00:00"
+      "ultima_verificacion": "2026-10-20T21:01:05.384208+00:00"
     },
     "yacyreta": {
       "nombre": "Yacyretá",
       "estado": "ABIERTO",
       "fecha_evento": "2026-10-14T20:12:46+00:00",
-      "dias_desde_evento": 5,
+      "dias_desde_evento": 6,
       "titular_fuente": "La apertura de la represa Itaipú se debe a las lluvias y no prueba que Lula da Silva quiera inundar Argentina - Chequeado",
       "link_fuente": "https://news.google.com/rss/articles/CBMi4wFBVV95cUxOdVVwWjl5XzNWNDVkeWNaOS1hUEo2Ul9wb2VOSmYtUU5fOWJfLUlHbnVOTUpoUXFUaUNJaEMzX1VTTkYzM3FTd3E2d21zaVJCdzVidnlzZ0RCMmZLNHBUWTBpTlpwWDFNZzZfNF9CMElYWml6bE1Ua3oyWk95M2p5ZGpoSkNHS29LMUlVMHJsS2hXS1JtS1Q4V0ZNZmdBSFNfc3gzdlM2cFlUYmtUV1h5aGxrV2ZRQXRjWFlSNm1SZVlldmJ6YTVQMVJjd1lIaXdjT1Q4d09fTkRZbHNjQ0Izb1VNdw?oc=5",
       "dias_hasta_corrientes_aprox": "1 a 3 dias",
-      "ultima_verificacion": "2026-10-20T16:03:04.905428+00:00"
+      "ultima_verificacion": "2026-10-20T21:01:05.973419+00:00"
     }
   },
   "alerta_temprana": {
     "hay_alerta": true,
     "avisos": [
-      "Itaipú abrió vertedero hace 5 día(s) — posible subida del Paraná en Corrientes/Chaco en 4 a 7 dias.",
-      "Yacyretá abrió vertedero hace 5 día(s) — posible subida del Paraná en Corrientes/Chaco en 1 a 3 dias."
+      "Itaipú abrió vertedero hace 6 día(s) — posible subida del Paraná en Corrientes/Chaco en 4 a 7 dias.",
+      "Yacyretá abrió vertedero hace 6 día(s) — posible subida del Paraná en Corrientes/Chaco en 1 a 3 dias."
     ]
   },
-  "actualizado": "2026-10-20T16:03:04.905451+00:00"
+  "actualizado": "2026-10-20T21:01:05.973439+00:00"
 }
