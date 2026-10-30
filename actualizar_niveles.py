@@ -34,6 +34,14 @@ Alerta/Evacuacion (la tabla tiene: Puerto, Rio, Altura, Variacion,
 Cambio, Alt. Ant, Alerta, Evacuacion, Historico). La fuente informa
 "cada 24 horas", asi que correr mas seguido que cada hora no aporta.
 
+NOTA (30/10/2026): la direccion http://wfich1.unl.edu.ar/... empezo a
+devolver 404 desde GitHub Actions. La direccion https://fich.unl.edu.ar/...
+(la del encabezado de este archivo) responde y tiene la misma tabla, asi
+que ahora es la primera que se prueba; la vieja queda de respaldo.
+Ademas, si NINGUNA fuente responde, el script ya NO falla ni toca el
+backend: avisa con un warning y termina bien. Asi los valores que se
+cargaron a mano quedan intactos hasta que la fuente vuelva.
+
 Fuente: Prefectura Naval Argentina, via CIM-UNL
         https://fich.unl.edu.ar/cim/rios/parana/alturas
 """
@@ -46,7 +54,11 @@ from datetime import datetime, timezone
 import requests
 from bs4 import BeautifulSoup
 
-URL_FUENTE = "http://wfich1.unl.edu.ar/cim/rios/parana/alturas"
+# Se prueban en orden; la primera que responda se usa.
+URLS_FUENTE = [
+    "https://fich.unl.edu.ar/cim/rios/parana/alturas",
+    "http://wfich1.unl.edu.ar/cim/rios/parana/alturas",
+]
 BACKEND_URL = "https://cuencas-bot.onrender.com"  # cambiar si el backend se muda
 TIMEOUT = 60.0  # Render gratis puede tardar hasta 1 minuto en despertar
 
@@ -84,6 +96,11 @@ COL_ALERTA = 6
 COL_EVACUACION = 7
 
 
+class FuenteNoDisponible(Exception):
+    """La fuente no respondio o cambio de formato. No es un error del script:
+    se avisa y se dejan los datos del backend como estan."""
+
+
 def _a_float(texto: str):
     """Convierte '6,31' -> 6.31. Devuelve None si no es un numero valido."""
     texto = texto.strip().replace(",", ".")
@@ -111,35 +128,38 @@ def despertar_backend() -> bool:
     return False
 
 
-def _descargar_filas() -> list:
-    """Descarga la pagina de la fuente y devuelve la tabla como lista de filas
-    (cada fila, una lista de textos de celda)."""
-    resp = None
+def _descargar_filas() -> tuple:
+    """Descarga la pagina de la fuente y devuelve (url_usada, filas), donde
+    filas es la tabla como lista de filas (cada una, una lista de textos).
+    Prueba cada URL de URLS_FUENTE, con reintentos."""
     ultimo_error = None
-    for intento in range(1, 4):
-        try:
-            resp = requests.get(URL_FUENTE, timeout=TIMEOUT, headers={"User-Agent": "Mozilla/5.0"})
-            resp.raise_for_status()
-            break
-        except requests.RequestException as e:
-            ultimo_error = e
-            print(f"  Fuente no respondio (intento {intento}/3): {e}")
-            resp = None
-            time.sleep(10)
-    if resp is None:
-        raise RuntimeError(f"No se pudo descargar la fuente: {ultimo_error}")
+    for url in URLS_FUENTE:
+        for intento in range(1, 4):
+            try:
+                resp = requests.get(url, timeout=TIMEOUT, headers={"User-Agent": "Mozilla/5.0"})
+                resp.raise_for_status()
+            except requests.RequestException as e:
+                ultimo_error = e
+                print(f"  Fuente {url} no respondio (intento {intento}/3): {e}")
+                # Un 404 no se arregla reintentando: pasar a la siguiente URL.
+                if getattr(e, "response", None) is not None and e.response.status_code == 404:
+                    break
+                time.sleep(10)
+                continue
 
-    soup = BeautifulSoup(resp.text, "lxml")
+            soup = BeautifulSoup(resp.text, "lxml")
+            tabla = soup.find("table")
+            if tabla is None:
+                ultimo_error = RuntimeError(f"{url} respondio pero sin tabla")
+                print(f"  {url} respondio pero no tiene ninguna tabla.")
+                break
+            filas = [
+                [c.get_text(strip=True) for c in fila.find_all(["td", "th"])]
+                for fila in tabla.find_all("tr")
+            ]
+            return url, filas
 
-    tabla = soup.find("table")
-    if tabla is None:
-        raise RuntimeError("No se encontro ninguna tabla en la pagina fuente. "
-                           "El sitio pudo haber cambiado de estructura, revisar manualmente.")
-
-    return [
-        [c.get_text(strip=True) for c in fila.find_all(["td", "th"])]
-        for fila in tabla.find_all("tr")
-    ]
+    raise FuenteNoDisponible(f"No se pudo leer ninguna fuente. Ultimo error: {ultimo_error}")
 
 
 def obtener_tabla_completa(filas: list) -> list:
@@ -250,7 +270,7 @@ def enviar_referencia_rio(estaciones: list, intentos: int = 3) -> bool:
 
 def main():
     print(f"=== Actualizador de niveles - {datetime.now(timezone.utc).isoformat()} ===")
-    print(f"Fuente: {URL_FUENTE}")
+    print(f"Fuentes (en orden): {', '.join(URLS_FUENTE)}")
     print(f"Backend: {BACKEND_URL}\n")
 
     if not os.environ.get("API_KEY_SENSORES"):
@@ -261,17 +281,22 @@ def main():
     despertar_backend()
 
     try:
-        filas = _descargar_filas()
+        url_usada, filas = _descargar_filas()
+        print(f"Fuente usada: {url_usada}")
         datos = obtener_datos_estaciones(filas)
         tabla_completa = obtener_tabla_completa(filas)
-    except Exception as e:
-        print(f"[ERROR FATAL] No se pudo leer la fuente: {e}")
-        sys.exit(1)
-
-    if not datos:
-        print("[ERROR FATAL] Se leyo la pagina pero no se encontro ninguna estacion "
-              "esperada. Revisar si la fuente cambio de formato.")
-        sys.exit(1)
+        if not datos:
+            raise FuenteNoDisponible(
+                "Se leyo la pagina pero no se encontro ninguna estacion esperada "
+                "(la fuente pudo cambiar de formato)."
+            )
+    except FuenteNoDisponible as e:
+        # No se toca el backend: los valores cargados a mano quedan como estan.
+        # El warning aparece destacado en la pagina del workflow de GitHub.
+        print(f"::warning title=Fuente de niveles no disponible::{e}")
+        print("[AVISO] No se actualizo nada. Los niveles del portal quedan con el "
+              "ultimo valor cargado (manual o automatico). Cargar a mano si hace falta.")
+        sys.exit(0)
 
     actualizadas, fallidas = [], []
 
