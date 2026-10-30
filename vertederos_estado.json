@@ -3,12 +3,12 @@
     "itaipu": {
       "nombre": "Itaipú",
       "estado": "ABIERTO",
-      "fecha_evento": "2026-10-26T17:52:13+00:00",
-      "dias_desde_evento": 3,
-      "titular_fuente": "ITAIPU reabrió su vertedero tras ajustar sus descargas para el control de la crecida - Itaipu Binacional",
-      "link_fuente": "https://news.google.com/rss/articles/CBMixgFBVV95cUxNMlVnaWVxVkZIbW5NejZCQmxHdVIyZkJjY0tGWFY0RDlKT0FuSkpLdkN4eC05OTZGTHRrYTY4X0huNlVoRGE4WWR0RHd0Vjh2UUJVRk9ZMXBDb3diczA4ekVjbU9wTElpRXNYbkpIaVJEaF9jb2wzX1RBTmlZLS1tQ196UTdQV1dPc0JXYy0zUDBnVS1wX1I1X1p1X0VjRFV5YnctUjVKV1ZWSmxNd0lZWkRQMXNjVlFHcWVMVTZRakpTZDN3U1E?oc=5",
+      "fecha_evento": "2026-10-19T07:00:00+00:00",
+      "dias_desde_evento": 10,
+      "titular_fuente": "Itaipú abrió sus compuertas y crece la atención por el impacto en el Paraná en la región - Diario Chaco",
+      "link_fuente": "https://news.google.com/rss/articles/CBMiwAFBVV95cUxPR3hVVVhnOHJWQTh0R0dwbmFrX09xY2t6Sm5hRTZYMHVlOGtROVJyQ0I5RkdhWUNGcVd0SDhtWTJwVktXU1VxaVZ2d0FUUGhFZ251Qnk5WW1fMUx4V1ZjQzFaUlZEaWhpWFpTcFBVZFNNYmJmTzNseFkyZ25vT3J0OXM5blE3c1NKb2ttVlhSbGdfU1F6blJUYmo2VzlwMlItS1d5QlN4ZDlDZUVWT3hwVmJpcG9rUktwMm5PaU00NUM?oc=5",
       "dias_hasta_corrientes_aprox": "4 a 7 dias",
-      "ultima_verificacion": "2026-10-29T18:08:54.566357+00:00"
+      "ultima_verificacion": "2026-10-30T03:38:02.549633+00:00"
     },
     "yacyreta": {
       "nombre": "Yacyretá",
@@ -18,15 +18,15 @@
       "titular_fuente": "El Niño golpea el Litoral: la central de Yacyretá abrió sus compuertas después de tres años por la crecida de los ríos - TN",
       "link_fuente": "https://news.google.com/rss/articles/CBMi8wFBVV95cUxNZkNQVE42cEUxVTZBY29Ycl9ubDNPbVV6VHVkMXd0cTZTckpHYXplcU5pYUtiLVRrcXdXUDRUZHRtR3RHQnRFeVFYUk9HWnBqdmlLQkRUQzJEbzVfbFhBNEI4aEllX1Q4ekRQaHJiWVJMUVk5UmlNcl9feERhUXlOSi1Pa3FWSEpYYWFyWHhFR0NDQXB0em10RU5leEx2T3BHQWtFZXp2ZUxYV0tvWWN5UzJaZVJCVlNhRTktNlpRMHNMX2dQN2JndFdFbHNjYUIzOW1CT2o3ZExObHBpR1JXeFNIRklMc0YzbjczQkVSYmRQVGvSAYcCQVVfeXFMTjlST01henM3Sl9nQ1dWWENLck9HVEdicVlvRFB3dFRtLVhNVjY1N2RxUWd5Y21XYVE1NjhEN2RvTmtqMzNmUXp2VjJtMWR0c0JDcDFxNlpYUF90dU1MUERhRmRISkV3eGEzUktmSE9tZXNNblAwR0J3aFY5ZWY1S1ctR0s5bElhbmVJZDlIVWJ4UWZ3YjhsOVdSTVRtSDVxNHVPMUIwUEo5VjBwaDF3WVBUWkxWRkNud0M0WjNNc1pVQ1BNaXhZOUxjZm9OWVJLYXpRdmpzYjlGUmpqNDJIN3o5SzRGLWNMX1Jvamhpc1VaY2JzRjM2UER5akdmZGVmUF9Oa2RKTE0?oc=5",
       "dias_hasta_corrientes_aprox": "1 a 3 dias",
-      "ultima_verificacion": "2026-10-29T18:08:55.033394+00:00"
+      "ultima_verificacion": "2026-10-30T03:38:03.094550+00:00"
     }
   },
   "alerta_temprana": {
     "hay_alerta": true,
     "avisos": [
-      "Itaipú abrió vertedero hace 3 día(s) — posible subida del Paraná en Corrientes/Chaco en 4 a 7 dias.",
+      "Itaipú abrió vertedero hace 10 día(s) — posible subida del Paraná en Corrientes/Chaco en 4 a 7 dias.",
       "Yacyretá abrió vertedero hace 15 día(s) — posible subida del Paraná en Corrientes/Chaco en 1 a 3 dias."
     ]
   },
-  "actualizado": "2026-10-29T18:08:55.033429+00:00"
+  "actualizado": "2026-10-30T03:38:03.094573+00:00"
 }
