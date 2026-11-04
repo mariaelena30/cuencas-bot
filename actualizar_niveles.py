@@ -1,69 +1,68 @@
 """
 Actualizador automatico de niveles de rio - Portal Hidrico Chaco.
 
-Lee la tabla publica de alturas hidrometricas de la cuenca del Parana
-(Prefectura Naval Argentina, publicada por el CIM - UNL) y actualiza
-el backend del Portal Hidrico Chaco via su endpoint POST.
+FUENTE PRINCIPAL: API publica del INA (Sistema de Informacion y Alerta
+Hidrologica, https://alerta.ina.gob.ar/a5). Las estaciones Barranqueras,
+Bermejo e Isla del Cerrito vienen de la red "escalas Prefectura Nacional",
+es decir, las mismas lecturas de Prefectura Naval Argentina que antes se
+tomaban via la pagina de la FICH-UNL.
+FUENTE DE RESPALDO: tabla de la FICH-UNL (https://fich.unl.edu.ar/cim/rios/parana/alturas)
+Se usa solo para las estaciones que el INA no devuelva, y para el panel
+"aguas arriba" (tabla completa de estaciones).
 
 IMPORTANTE SOBRE PRECISION (leer antes de tocar el mapeo):
-- 2 localidades tienen estacion propia y exacta en esta fuente:
-  Barranqueras, Isla del Cerrito.
-- 4 localidades usan la estacion mas cercana del MISMO tramo de rio,
-  porque no tienen hidrometro propio publicado aca (Resistencia y
-  Puerto Vilelas -> estacion Barranqueras; Puerto Bermejo -> estacion
-  "Bermejo"; La Leonesa -> estacion "Las Palmas"). Son aproximaciones
-  razonables por cercania geografica, NO el punto exacto.
-- 4 localidades NO tienen dato real disponible en esta fuente porque
-  estan en las cuencas del Bermejo, que esta red no cubre:
+- 2 localidades tienen estacion propia y exacta: Barranqueras, Isla del Cerrito.
+- 4 localidades usan la estacion mas cercana del MISMO tramo de rio
+  (Resistencia y Puerto Vilelas -> Barranqueras; Puerto Bermejo -> "Bermejo";
+  La Leonesa -> "Las Palmas"). Son aproximaciones, NO el punto exacto.
+- "Las Palmas" NO figura en el catalogo del INA (verificado 04/11/2026):
+  La Leonesa solo se actualiza si responde la FICH. No se inventa un codigo.
+- 4 localidades NO tienen dato real en estas fuentes (cuencas del Bermejo):
   El Sauzalito, Pampa del Indio, Villa Rio Bermejito, Fuerte Esperanza.
-  Estas quedan con "conectado": False hasta conseguir otra fuente.
 
-NOTA (02/09/2026): se sacaron las estaciones "Corrientes" y "Formosa"
-de MAPEO_ESTACIONES - esas localidades ya NO forman parte del alcance
-del proyecto (Portal Hidrico Chaco cubre solo la provincia del Chaco).
+NOTA (02/10/2026): el backend exige la clave en el header X-API-Key, que se lee
+de la variable de entorno API_KEY_SENSORES. Nunca escribirla en este archivo.
 
-NOTA (02/10/2026): el backend ahora exige la clave de escritura en el
-header X-API-Key. Se lee de la variable de entorno API_KEY_SENSORES
-(la MISMA que esta cargada en Render). Nunca escribir la clave en este
-archivo.
+NOTA (04/11/2026): la FICH empezo a fallar. Se agrego el INA como fuente
+principal. Reglas de seguridad nuevas:
+  * Se usa la altura media diaria (serie Hmd, var 39) del INA.
+  * Si el dato mas reciente tiene mas de MAX_ANTIGUEDAD_DIAS dias, NO se envia
+    (mejor dejar el valor cargado a mano que publicar un nivel viejo como actual).
+  * Si ninguna fuente responde, el script avisa y termina sin tocar el backend.
 
-NOTA (05/10/2026): se agrego (1) despertar el backend antes de enviar
-datos (Render gratis se duerme), (2) reintentos al leer la fuente y al
-enviar cada lectura, y (3) se corrigieron los indices de columna de
-Alerta/Evacuacion (la tabla tiene: Puerto, Rio, Altura, Variacion,
-Cambio, Alt. Ant, Alerta, Evacuacion, Historico). La fuente informa
-"cada 24 horas", asi que correr mas seguido que cada hora no aporta.
-
-NOTA (30/10/2026): la direccion http://wfich1.unl.edu.ar/... empezo a
-devolver 404 desde GitHub Actions. La direccion https://fich.unl.edu.ar/...
-(la del encabezado de este archivo) responde y tiene la misma tabla, asi
-que ahora es la primera que se prueba; la vieja queda de respaldo.
-Ademas, si NINGUNA fuente responde, el script ya NO falla ni toca el
-backend: avisa con un warning y termina bien. Asi los valores que se
-cargaron a mano quedan intactos hasta que la fuente vuelva.
-
-Fuente: Prefectura Naval Argentina, via CIM-UNL
-        https://fich.unl.edu.ar/cim/rios/parana/alturas
+Alturas de referencia INA (m, escala de Prefectura): Barranqueras alerta 6,00 /
+evacuacion 6,50; Bermejo alerta 6,50 / evacuacion 7,00.
 """
 
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import requests
 from bs4 import BeautifulSoup
 
-# Se prueban en orden; la primera que responda se usa.
-URLS_FUENTE = [
+BACKEND_URL = "https://cuencas-bot.onrender.com"  # cambiar si el backend se muda
+TIMEOUT = 60.0  # Render gratis puede tardar hasta 1 minuto en despertar
+HEADERS = {"User-Agent": "Mozilla/5.0 (PortalHidricoChaco actualizador)"}
+
+INA_URL = "https://alerta.ina.gob.ar/a5/getObservaciones"
+MAX_ANTIGUEDAD_DIAS = 3
+
+URLS_FICH = [
     "https://fich.unl.edu.ar/cim/rios/parana/alturas",
     "http://wfich1.unl.edu.ar/cim/rios/parana/alturas",
 ]
-BACKEND_URL = "https://cuencas-bot.onrender.com"  # cambiar si el backend se muda
-TIMEOUT = 60.0  # Render gratis puede tardar hasta 1 minuto en despertar
+
+# Estacion -> serie del INA (Altura hidrometrica media diaria, medicion directa)
+SERIES_INA = {
+    "Barranqueras": 26262,      # estacion INA 20
+    "Bermejo": 26300,           # estacion INA 58
+    "Isla del Cerrito": 26301,  # estacion INA 59
+}
 
 # ---------------------------------------------------------------------
-# MAPEO estacion (nombre EXACTO en la tabla de la fuente) -> localidad
+# MAPEO estacion -> localidad del portal
 # "exacto": True  = la estacion es literalmente esa localidad
 # "exacto": False = estacion mas cercana del mismo tramo, aproximacion
 # ---------------------------------------------------------------------
@@ -84,27 +83,21 @@ MAPEO_ESTACIONES = {
     ],
 }
 
-# Localidades que sabemos de antemano que esta fuente NO cubre.
 SIN_FUENTE_DISPONIBLE = [
     "el_sauzalito", "pampa_del_indio", "villa_rio_bermejito", "fuerte_esperanza",
 ]
 
-# Posicion de cada columna en la tabla de la fuente
+# Posicion de cada columna en la tabla de la FICH
 COL_ALTURA = 2
 COL_ALTURA_ANTERIOR = 5
 COL_ALERTA = 6
 COL_EVACUACION = 7
 
 
-class FuenteNoDisponible(Exception):
-    """La fuente no respondio o cambio de formato. No es un error del script:
-    se avisa y se dejan los datos del backend como estan."""
-
-
 def _a_float(texto: str):
     """Convierte '6,31' -> 6.31. Devuelve None si no es un numero valido."""
     texto = texto.strip().replace(",", ".")
-    if texto in ("", "-", "—", "\u2014"):
+    if texto in ("", "-", "—", "—"):
         return None
     try:
         return float(texto)
@@ -113,8 +106,7 @@ def _a_float(texto: str):
 
 
 def despertar_backend() -> bool:
-    """Render (plan gratis) se duerme por inactividad y tarda en arrancar.
-    Le pegamos a la raiz hasta que responda, antes de mandar datos."""
+    """Render (plan gratis) se duerme por inactividad y tarda en arrancar."""
     for intento in range(1, 7):
         try:
             r = requests.get(f"{BACKEND_URL}/", timeout=TIMEOUT)
@@ -128,110 +120,177 @@ def despertar_backend() -> bool:
     return False
 
 
-def _descargar_filas() -> tuple:
-    """Descarga la pagina de la fuente y devuelve (url_usada, filas), donde
-    filas es la tabla como lista de filas (cada una, una lista de textos).
-    Prueba cada URL de URLS_FUENTE, con reintentos."""
-    ultimo_error = None
-    for url in URLS_FUENTE:
-        for intento in range(1, 4):
+# ----------------------------------------------------------------------
+# FUENTE PRINCIPAL: INA
+# ----------------------------------------------------------------------
+def parsear_observaciones_ina(obs: list, ahora=None):
+    """Recibe la lista JSON de getObservaciones y devuelve
+    {"altura", "variacion_24h", "fecha"} o None si no hay dato utilizable.
+
+    - Usa el valor mas reciente con 'valor' numerico.
+    - variacion_24h = ultimo - anterior (solo si el anterior es del dia previo).
+    - Devuelve None si el ultimo dato supera MAX_ANTIGUEDAD_DIAS."""
+    ahora = ahora or datetime.now(timezone.utc)
+    validas = []
+    for o in obs or []:
+        valor = o.get("valor")
+        inicio = o.get("timestart")
+        if valor is None or not inicio:
+            continue
+        try:
+            fecha = datetime.fromisoformat(inicio.replace("Z", "+00:00"))
+            valor = float(valor)
+        except (ValueError, TypeError):
+            continue
+        validas.append((fecha, valor))
+    if not validas:
+        return None
+    validas.sort(key=lambda x: x[0])
+    fecha, altura = validas[-1]
+    if ahora - fecha > timedelta(days=MAX_ANTIGUEDAD_DIAS + 1):
+        return {"altura": None, "obsoleto": True, "fecha": fecha}
+    variacion = None
+    if len(validas) >= 2:
+        fecha_ant, valor_ant = validas[-2]
+        if timedelta(hours=20) <= (fecha - fecha_ant) <= timedelta(hours=28):
+            variacion = round(altura - valor_ant, 2)
+    return {"altura": altura, "variacion_24h": variacion, "fecha": fecha, "obsoleto": False}
+
+
+def consultar_ina(series_id: int, intentos: int = 3):
+    """Pide los ultimos 6 dias de la serie. Devuelve la lista JSON o lanza."""
+    hasta = datetime.now(timezone.utc) + timedelta(days=1)
+    desde = hasta - timedelta(days=7)
+    params = {
+        "tipo": "puntual",
+        "series_id": series_id,
+        "timestart": desde.strftime("%Y-%m-%d"),
+        "timeend": hasta.strftime("%Y-%m-%d"),
+        "format": "json",
+    }
+    ultimo = None
+    for intento in range(1, intentos + 1):
+        try:
+            r = requests.get(INA_URL, params=params, timeout=TIMEOUT, headers=HEADERS)
+            r.raise_for_status()
+            data = r.json()
+            if not isinstance(data, list):
+                raise ValueError(f"respuesta inesperada: {type(data).__name__}")
+            return data
+        except Exception as e:
+            ultimo = e
+            print(f"  INA serie {series_id} no respondio (intento {intento}/{intentos}): {e}")
+            if intento < intentos:
+                time.sleep(10)
+    raise RuntimeError(f"INA serie {series_id}: {ultimo}")
+
+
+def obtener_datos_ina() -> dict:
+    """{ 'Barranqueras': {...}, ... } con las estaciones que el INA devolvio bien."""
+    resultado = {}
+    for estacion, serie in SERIES_INA.items():
+        try:
+            info = parsear_observaciones_ina(consultar_ina(serie))
+        except Exception as e:
+            print(f"  [AVISO] INA fallo para {estacion}: {e}")
+            continue
+        if info is None:
+            print(f"  [AVISO] INA sin datos para {estacion}.")
+            continue
+        if info.get("obsoleto"):
+            print(f"  [AVISO] INA: el dato de {estacion} es del {info['fecha'].date()} "
+                  f"(mas de {MAX_ANTIGUEDAD_DIAS} dias); no se envia.")
+            continue
+        info["fuente"] = "INA"
+        resultado[estacion] = info
+        print(f"  INA {estacion}: {info['altura']} m (dia {info['fecha'].date()}, "
+              f"variacion {info['variacion_24h']})")
+    return resultado
+
+
+# ----------------------------------------------------------------------
+# RESPALDO: FICH-UNL
+# ----------------------------------------------------------------------
+def _descargar_filas_fich():
+    """Devuelve la tabla de la FICH como lista de filas, o None si no responde."""
+    for url in URLS_FICH:
+        for intento in range(1, 3):
             try:
-                resp = requests.get(url, timeout=TIMEOUT, headers={"User-Agent": "Mozilla/5.0"})
+                resp = requests.get(url, timeout=TIMEOUT, headers=HEADERS)
                 resp.raise_for_status()
             except requests.RequestException as e:
-                ultimo_error = e
-                print(f"  Fuente {url} no respondio (intento {intento}/3): {e}")
-                # Un 404 no se arregla reintentando: pasar a la siguiente URL.
-                if getattr(e, "response", None) is not None and e.response.status_code == 404:
+                print(f"  FICH {url} no respondio (intento {intento}/2): {e}")
+                if getattr(e, "response", None) is not None and e.response.status_code in (403, 404):
                     break
-                time.sleep(10)
+                time.sleep(5)
                 continue
-
-            soup = BeautifulSoup(resp.text, "lxml")
-            tabla = soup.find("table")
+            tabla = BeautifulSoup(resp.text, "lxml").find("table")
             if tabla is None:
-                ultimo_error = RuntimeError(f"{url} respondio pero sin tabla")
-                print(f"  {url} respondio pero no tiene ninguna tabla.")
+                print(f"  FICH {url} respondio sin tabla.")
                 break
-            filas = [
+            return [
                 [c.get_text(strip=True) for c in fila.find_all(["td", "th"])]
                 for fila in tabla.find_all("tr")
             ]
-            return url, filas
-
-    raise FuenteNoDisponible(f"No se pudo leer ninguna fuente. Ultimo error: {ultimo_error}")
+    return None
 
 
 def obtener_tabla_completa(filas: list) -> list:
-    """Todas las estaciones de la tabla (Parana, Paraguay, aguas arriba), para
-    el panel de referencia del rio. La tendencia NO se lee del icono de la
-    pagina: se deduce del signo de la variacion."""
+    """Todas las estaciones de la tabla FICH, para el panel 'aguas arriba'."""
     estaciones = []
     for celdas in filas:
         if len(celdas) < 8:
             continue
         puerto, rio = celdas[0], celdas[1]
         if not puerto or puerto.lower() == "puerto":
-            continue  # encabezado
+            continue
         altura = _a_float(celdas[COL_ALTURA])
         anterior = _a_float(celdas[COL_ALTURA_ANTERIOR])
         variacion = round(altura - anterior, 2) if altura is not None and anterior is not None else None
         estaciones.append({
-            "puerto": puerto,
-            "rio": rio,
-            "altura_m": altura,
-            "variacion_m": variacion,
-            "altura_anterior_m": anterior,
+            "puerto": puerto, "rio": rio, "altura_m": altura,
+            "variacion_m": variacion, "altura_anterior_m": anterior,
             "alerta_m": _a_float(celdas[COL_ALERTA]),
             "evacuacion_m": _a_float(celdas[COL_EVACUACION]),
         })
     return estaciones
 
 
-def obtener_datos_estaciones(filas: list) -> dict:
-    """
-    Parsea las estaciones que usa el portal. Devuelve un dict:
-    { "Barranqueras": {"altura": 4.16, "alerta": 6.00, "evacuacion": 6.50}, ... }
-    """
+def obtener_datos_estaciones_fich(filas: list) -> dict:
     resultado = {}
     for celdas in filas:
         if len(celdas) < 6:
             continue
-        nombre_estacion = celdas[0]
-        if nombre_estacion not in MAPEO_ESTACIONES:
-            continue  # no nos interesa esta fila
+        nombre = celdas[0]
+        if nombre not in MAPEO_ESTACIONES:
+            continue
         altura = _a_float(celdas[COL_ALTURA])
-        alerta = _a_float(celdas[COL_ALERTA]) if len(celdas) > COL_ALERTA else None
-        evacuacion = _a_float(celdas[COL_EVACUACION]) if len(celdas) > COL_EVACUACION else None
         if altura is None:
-            continue  # "sin datos" ese dia, no actualizamos con basura
+            continue
         anterior = _a_float(celdas[COL_ALTURA_ANTERIOR]) if len(celdas) > COL_ALTURA_ANTERIOR else None
-        variacion = round(altura - anterior, 2) if anterior is not None else None
-        resultado[nombre_estacion] = {
+        resultado[nombre] = {
             "altura": altura,
-            "variacion_24h": variacion,
-            "alerta": alerta,
-            "evacuacion": evacuacion,
+            "variacion_24h": round(altura - anterior, 2) if anterior is not None else None,
+            "fuente": "FICH",
         }
     return resultado
 
 
+# ----------------------------------------------------------------------
+# BACKEND
+# ----------------------------------------------------------------------
 def actualizar_backend(localidad: str, nivel_metros: float, variacion_24h=None, intentos: int = 3) -> bool:
     clave_api = os.environ.get("API_KEY_SENSORES", "")
     for intento in range(1, intentos + 1):
         try:
             r = requests.post(
                 f"{BACKEND_URL}/hidrologia/actualizar",
-                json={
-                    "localidad": localidad,
-                    "nivel_metros": nivel_metros,
-                    "variacion_24h_m": variacion_24h,
-                },
+                json={"localidad": localidad, "nivel_metros": nivel_metros,
+                      "variacion_24h_m": variacion_24h},
                 headers={"X-API-Key": clave_api},
                 timeout=TIMEOUT,
             )
             if r.status_code in (401, 403):
-                # Clave incorrecta: reintentar no sirve.
                 print(f"  [ERROR] {localidad}: el backend rechazo la clave ({r.status_code}). "
                       "Revisar que API_KEY_SENSORES sea igual en GitHub y en Render.")
                 return False
@@ -245,7 +304,6 @@ def actualizar_backend(localidad: str, nivel_metros: float, variacion_24h=None, 
 
 
 def enviar_referencia_rio(estaciones: list, intentos: int = 3) -> bool:
-    """Manda la tabla completa de estaciones para el panel 'aguas arriba'."""
     clave_api = os.environ.get("API_KEY_SENSORES", "")
     for intento in range(1, intentos + 1):
         try:
@@ -270,7 +328,6 @@ def enviar_referencia_rio(estaciones: list, intentos: int = 3) -> bool:
 
 def main():
     print(f"=== Actualizador de niveles - {datetime.now(timezone.utc).isoformat()} ===")
-    print(f"Fuentes (en orden): {', '.join(URLS_FUENTE)}")
     print(f"Backend: {BACKEND_URL}\n")
 
     if not os.environ.get("API_KEY_SENSORES"):
@@ -280,33 +337,35 @@ def main():
 
     despertar_backend()
 
-    try:
-        url_usada, filas = _descargar_filas()
-        print(f"Fuente usada: {url_usada}")
-        datos = obtener_datos_estaciones(filas)
+    print("Fuente principal: INA")
+    datos = obtener_datos_ina()
+
+    # Respaldo FICH: completa las estaciones que el INA no dio (p. ej. Las Palmas)
+    # y trae la tabla completa para el panel "aguas arriba".
+    print("\nRespaldo: FICH-UNL")
+    filas = _descargar_filas_fich()
+    tabla_completa = []
+    if filas:
         tabla_completa = obtener_tabla_completa(filas)
-        if not datos:
-            raise FuenteNoDisponible(
-                "Se leyo la pagina pero no se encontro ninguna estacion esperada "
-                "(la fuente pudo cambiar de formato)."
-            )
-    except FuenteNoDisponible as e:
-        # No se toca el backend: los valores cargados a mano quedan como estan.
-        # El warning aparece destacado en la pagina del workflow de GitHub.
-        print(f"::warning title=Fuente de niveles no disponible::{e}")
-        print("[AVISO] No se actualizo nada. Los niveles del portal quedan con el "
-              "ultimo valor cargado (manual o automatico). Cargar a mano si hace falta.")
+        for estacion, info in obtener_datos_estaciones_fich(filas).items():
+            if estacion not in datos:
+                datos[estacion] = info
+                print(f"  FICH {estacion}: {info['altura']} m (completa lo que no dio el INA)")
+    else:
+        print("  FICH no disponible (se sigue solo con el INA).")
+
+    if not datos:
+        print("::warning title=Sin fuentes de niveles::Ni el INA ni la FICH devolvieron datos utilizables.")
+        print("[AVISO] No se actualizo nada. Los niveles del portal quedan con el ultimo "
+              "valor cargado (manual o automatico). Cargar a mano si hace falta.")
         sys.exit(0)
 
     actualizadas, fallidas = [], []
-
     for nombre_estacion, info in datos.items():
-        destinos = MAPEO_ESTACIONES[nombre_estacion]
-        for destino in destinos:
-            clave = destino["localidad"]
-            exacto = destino["exacto"]
+        for destino in MAPEO_ESTACIONES[nombre_estacion]:
+            clave, exacto = destino["localidad"], destino["exacto"]
             etiqueta = "medicion directa" if exacto else "APROXIMADO, estacion cercana"
-            print(f"{nombre_estacion} ({etiqueta}) -> {clave}: {info['altura']} m")
+            print(f"{nombre_estacion} [{info['fuente']}] ({etiqueta}) -> {clave}: {info['altura']} m")
             ok = actualizar_backend(clave, info["altura"], info.get("variacion_24h"))
             (actualizadas if ok else fallidas).append(clave)
 
@@ -315,8 +374,14 @@ def main():
         if not enviar_referencia_rio(tabla_completa):
             fallidas.append("referencia_rio")
     else:
-        print("[AVISO] No se pudo armar la tabla completa de estaciones.")
+        print("\n[AVISO] Sin tabla de referencia del rio (la FICH no respondio); "
+              "el panel 'aguas arriba' queda con lo ultimo cargado.")
 
+    sin_dato = [d["localidad"] for e, ds in MAPEO_ESTACIONES.items() if e not in datos for d in ds]
+    if sin_dato:
+        print("\n--- Localidades sin dato en esta corrida (se dejan como estan) ---")
+        for clave in sin_dato:
+            print(f"  {clave}")
     print("\n--- Localidades sin fuente publica disponible (sin tocar) ---")
     for clave in SIN_FUENTE_DISPONIBLE:
         print(f"  {clave}: sigue con dato de referencia")
