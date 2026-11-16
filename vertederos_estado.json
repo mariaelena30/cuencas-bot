@@ -4,28 +4,28 @@
       "nombre": "Itaipú",
       "estado": "ABIERTO",
       "fecha_evento": "2026-11-02T08:00:00+00:00",
-      "dias_desde_evento": 13,
+      "dias_desde_evento": 14,
       "titular_fuente": "Itaipú reabrió el segundo vertedero y libera 11 millones de litros por segundo - https://www.noticiero9.com.ar/",
       "link_fuente": "https://news.google.com/rss/articles/CBMitAFBVV95cUxNR0RfYkJwaXlaeXRJMkI5RGtxYWFabVoxNkd1bGpieGoyZ0MzMC11amwxVksxRVQ5WElna0t2a2Q2MVdaU3puOU1zNFBWRzJZelZuZXBLMU9qMF9tMm9obWxaWG9ROWp2ZDE3dWp4MDdKSkI3WGo0T3hVTkJwb1loZ1BLYnZSaFk4NGRFbWhkN0RLOTBYX2tsc3NBVmt6Q2dGMm1kek9La1NFb2lNbWpsYUtUZEw?oc=5",
       "dias_hasta_corrientes_aprox": "4 a 7 dias",
-      "ultima_verificacion": "2026-11-16T03:54:26.756199+00:00"
+      "ultima_verificacion": "2026-11-16T14:20:05.983192+00:00"
     },
     "yacyreta": {
       "nombre": "Yacyretá",
       "estado": "ABIERTO",
       "fecha_evento": "2026-10-27T07:00:00+00:00",
-      "dias_desde_evento": 19,
+      "dias_desde_evento": 20,
       "titular_fuente": "Itaipú reabrió sus compuertas y liberó 3,1 millones de litros de agua por segundo - Elonce.com",
       "link_fuente": "https://news.google.com/rss/articles/CBMiuAFBVV95cUxQZ2xXUXkzVEdobjU1V193QUhUazliRE44cWhvOWhfb0lYM29CTkQ5c2I2YnQtNk1vNngwMEhyT21KWXhmQjBobld0aTZrY3Rhc3VlbFA3cWVTRUtsSE1pU29lUjNKa1YtclBnQmthZHdyUFRhby1kbVpqcGZGUWZFNkxZcmlIUjB3OERvOGRGaXJTdXJwMEpYMktlc096WTFERWFoZERUQU03WlhvQXZhWlhyMFFOQTJT0gGyAUFVX3lxTE1VWlZETjVWZWdTeHJfTklxdzF4RHAyYzNsTmwxNWhiLV8wVHRSOFpYMVJjanJRWDE5MkxRWHpoNFBRT3hVRjVYcVNvLWdwZVpXQjFDMkx4dzZtTTRJazV3Q2JINldLU3A4YmVsN0pwZmdOLVk2c28xbUl6SFpkcHNTRkpuNTVCRVV2dXJLSVN4eFROMWZEa0tLZW5XajZQOTdGUmhSRVlVWm1uYTZGaVZTZGc?oc=5",
       "dias_hasta_corrientes_aprox": "1 a 3 dias",
-      "ultima_verificacion": "2026-11-16T03:54:27.025189+00:00"
+      "ultima_verificacion": "2026-11-16T14:20:06.295897+00:00"
     }
   },
   "alerta_temprana": {
     "hay_alerta": true,
     "avisos": [
-      "Itaipú abrió vertedero hace 13 día(s) — posible subida del Paraná en Corrientes/Chaco en 4 a 7 dias."
+      "Itaipú abrió vertedero hace 14 día(s) — posible subida del Paraná en Corrientes/Chaco en 4 a 7 dias."
     ]
   },
-  "actualizado": "2026-11-16T03:54:27.025210+00:00"
+  "actualizado": "2026-11-16T14:20:06.295917+00:00"
 }
