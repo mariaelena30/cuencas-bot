@@ -2,20 +2,30 @@
   "vertederos": {
     "itaipu": {
       "nombre": "Itaipú",
-      "estado": "DESCONOCIDO",
-      "error": "No se pudo consultar noticias: HTTP Error 503: Service Unavailable",
-      "ultima_verificacion": "2026-11-26T01:20:43.708961+00:00"
+      "estado": "ABIERTO",
+      "fecha_evento": "2026-11-02T08:00:00+00:00",
+      "dias_desde_evento": 24,
+      "titular_fuente": "Fenómeno El Niño | Itaipú abrió un segundo canal de su vertedero para regular el caudal del río Paraná - MisionesOnline",
+      "link_fuente": "https://news.google.com/rss/articles/CBMib0FVX3lxTFBkemYtWjlYYTVON2hlRy1RVndQUDVVelQ3QjhyV3dtNGVrTFNvWVE1M0FlcGw4YVFodkhEUVhEMXZNTGJEcUl1SGt0NVpJVF9VNzhQNzVsVk43bjlUT2xjNzZCNVVldEozSFhJancxQQ?oc=5",
+      "dias_hasta_corrientes_aprox": "4 a 7 dias",
+      "ultima_verificacion": "2026-11-26T16:03:00.869735+00:00"
     },
     "yacyreta": {
       "nombre": "Yacyretá",
-      "estado": "DESCONOCIDO",
-      "error": "No se pudo consultar noticias: HTTP Error 503: Service Unavailable",
-      "ultima_verificacion": "2026-11-26T01:20:51.795886+00:00"
+      "estado": "ABIERTO",
+      "fecha_evento": "2026-11-26T14:33:23+00:00",
+      "dias_desde_evento": 0,
+      "titular_fuente": "Yacyretá abrió sus compuertas y el Paraná volverá a marcar 6 metros en Barranqueras - SPNoticias",
+      "link_fuente": "https://news.google.com/rss/articles/CBMirwFBVV95cUxNUVZoektiQUVTTmppTFFYc1hERTUwWEtTQUxOTm9TdjJUNjJVLWY4QmJMWmhPSW1WWmswSFZhUHJobmdFTTZlZU8tR1d5V3VaaVc4WG1qY284cml6SDhtSG9aY2lldGtRaTZyMFdKLTBFSUh2Zmt6Z0E0YnhyUzVPZktsRmgySXhBOTd3NWhwdVI1X3h2bFM2cDBFWkI4TGpZaThVeDFmN3dsSzlIUkF3?oc=5",
+      "dias_hasta_corrientes_aprox": "1 a 3 dias",
+      "ultima_verificacion": "2026-11-26T16:03:01.274981+00:00"
     }
   },
   "alerta_temprana": {
-    "hay_alerta": false,
-    "avisos": []
+    "hay_alerta": true,
+    "avisos": [
+      "Yacyretá abrió vertedero hace 0 día(s) — posible subida del Paraná en Corrientes/Chaco en 1 a 3 dias."
+    ]
   },
-  "actualizado": "2026-11-26T01:20:51.796073+00:00"
+  "actualizado": "2026-11-26T16:03:01.275000+00:00"
 }
