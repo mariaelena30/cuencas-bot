@@ -2,28 +2,20 @@
   "vertederos": {
     "itaipu": {
       "nombre": "Itaipú",
-      "estado": "ABIERTO",
-      "fecha_evento": "2026-11-02T08:00:00+00:00",
-      "dias_desde_evento": 23,
-      "titular_fuente": "Fenómeno El Niño | Itaipú abrió un segundo canal de su vertedero para regular el caudal del río Paraná - MisionesOnline",
-      "link_fuente": "https://news.google.com/rss/articles/CBMib0FVX3lxTFBkemYtWjlYYTVON2hlRy1RVndQUDVVelQ3QjhyV3dtNGVrTFNvWVE1M0FlcGw4YVFodkhEUVhEMXZNTGJEcUl1SGt0NVpJVF9VNzhQNzVsVk43bjlUT2xjNzZCNVVldEozSFhJancxQQ?oc=5",
-      "dias_hasta_corrientes_aprox": "4 a 7 dias",
-      "ultima_verificacion": "2026-11-25T16:29:37.924348+00:00"
+      "estado": "DESCONOCIDO",
+      "error": "No se pudo consultar noticias: HTTP Error 503: Service Unavailable",
+      "ultima_verificacion": "2026-11-26T01:20:43.708961+00:00"
     },
     "yacyreta": {
       "nombre": "Yacyretá",
-      "estado": "ABIERTO",
-      "fecha_evento": "2026-10-27T18:02:13+00:00",
-      "dias_desde_evento": 28,
-      "titular_fuente": "\"No va a suceder eso\": el presidente de la APA desmintió un pico de crecida por la apertura de compuertas en Itaipú - Alerta Urbana",
-      "link_fuente": "https://news.google.com/rss/articles/CBMi5gFBVV95cUxOX0ZEYTcxeDJBM1pHSEhQV0VseDNIaWNKUzZ3NWhadU1SMjNHOVBfaGRsaUh3bjV0NFZxMERjbWlGTW5WZ2Z0dmJBQV9oTzg4TUw4ZlZoc2ZNWVNvYjd1NGw3aWtjT3MtTTZfRGRXcjdlNG9KNFRLazVUZTZLeFBKQU9NY2dlei1hT2FreDdmV1JZZ21DU2U5aHlpV2J6bUFhY2dkM3ROM2I1ZlkxdzNiTm9LZElTTkdneGNlQ01aczJrQjB6Qlc3M3lrUHYzUFBYOUplcFctbk5ITWZhQVl3UGpLQ2lsUQ?oc=5",
-      "dias_hasta_corrientes_aprox": "1 a 3 dias",
-      "ultima_verificacion": "2026-11-25T16:29:38.231042+00:00"
+      "estado": "DESCONOCIDO",
+      "error": "No se pudo consultar noticias: HTTP Error 503: Service Unavailable",
+      "ultima_verificacion": "2026-11-26T01:20:51.795886+00:00"
     }
   },
   "alerta_temprana": {
     "hay_alerta": false,
     "avisos": []
   },
-  "actualizado": "2026-11-25T16:29:38.231060+00:00"
+  "actualizado": "2026-11-26T01:20:51.796073+00:00"
 }
